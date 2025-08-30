@@ -299,17 +299,34 @@ export default function TaskListBoard() {
     let mounted = true;
     (async () => {
       try {
+        console.log('🔄 Buscando jobs de produção...');
         const jobs = await apiClient.get<any[]>('/api/production');
-        if (!Array.isArray(jobs)) return;
+        console.log('📊 Jobs recebidos:', jobs?.length || 0, jobs);
+        
+        if (!Array.isArray(jobs)) {
+          console.warn('⚠️ Resposta da API não é um array:', jobs);
+          return;
+        }
 
         // Precisamos de alguns dados de order para título/subtítulo
         // Opcional: buscar /api/orders?id= para cada orderId — por ora, mostrar ID e material
         const mappedAll: Record<string, TaskItem[]> = {};
         const tempTasks: TaskItem[] = [];
         const techMap = new Map<string, string>();
+        
+        console.log('🔍 Processando jobs...');
         for (const p of jobs) {
-          // Só exibir após designar um técnico
-          if (!p.operadorId) continue;
+          console.log('📋 Job processado:', {
+            id: p.id,
+            orderId: p.orderId,
+            operadorId: p.operadorId,
+            stageId: p.stageId,
+            workType: p.workType,
+            isActive: p.isActive
+          });
+          
+          // Remover filtro de operadorId para mostrar todos os jobs em produção
+          // if (!p.operadorId) continue;
           const status: ColumnId = resolveTaskStatus(p.stageId);
           const task: TaskItem = {
             id: String(p.id),
@@ -323,15 +340,32 @@ export default function TaskListBoard() {
             comments: undefined,
             attachments: (Array.isArray(p.camFiles) ? p.camFiles.length : 0) + (Array.isArray(p.cadFiles) ? p.cadFiles.length : 0) || undefined,
             status,
-            assigneeInitials: p.operadorName ? String(p.operadorName).slice(0,2).toUpperCase() : undefined,
-            operadorId: String(p.operadorId),
+            assigneeInitials: p.operadorName ? String(p.operadorName).slice(0,2).toUpperCase() : 'NA',
+            operadorId: p.operadorId ? String(p.operadorId) : undefined,
             operadorName: p.operadorName ? String(p.operadorName) : undefined,
           };
+          
+          console.log('✅ Task criada:', {
+            id: task.id,
+            title: task.title,
+            status: task.status,
+            workType: task.workType,
+            operadorId: task.operadorId
+          });
+          
           if (!mappedAll[status]) mappedAll[status] = [];
           mappedAll[status].push(task);
           tempTasks.push({ ...task, id: String(task.id) });
           if (p.operadorId) techMap.set(String(p.operadorId), String(p.operadorName || p.operadorId));
         }
+        
+        console.log('📈 Resumo final:', {
+          totalJobs: jobs.length,
+          totalTasks: tempTasks.length,
+          colunas: Object.keys(mappedAll),
+          tasksPorColuna: Object.entries(mappedAll).map(([col, tasks]) => `${col}: ${tasks.length}`).join(', ')
+        });
+        
         if (mounted) {
           setAllTasksData(tempTasks);
           setTechOptions(Array.from(techMap.entries()).map(([id, name]) => ({ id, name })));
