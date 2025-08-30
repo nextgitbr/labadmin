@@ -21,6 +21,132 @@ import NewUserModal from '@/components/user-management/NewUserModal';
 import { UserPermissionsModal } from '@/components/user-permissions/UserPermissionsModal';
 // DeleteUserModal não encontrado, criar stub temporário:
 const DeleteUserModal = () => null;
+import apiClient from '@/lib/apiClient';
+
+// Modal de alteração de senha
+function PasswordChangeModal({ isOpen, onClose, userId, userEmail }: { 
+  isOpen: boolean; 
+  onClose: () => void; 
+  userId?: string;
+  userEmail?: string;
+}) {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setError("Todos os campos são obrigatórios");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("A nova senha e confirmação não coincidem");
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError("A nova senha deve ter pelo menos 6 caracteres");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await apiClient.post("/api/user/change-password", {
+        currentPassword,
+        newPassword,
+      });
+
+      if (response.success) {
+        alert("Senha alterada com sucesso!");
+        onClose();
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        setError(response.message || "Erro ao alterar senha");
+      }
+    } catch (err: any) {
+      console.error("Erro ao alterar senha:", err);
+      setError(err.message || "Erro ao alterar senha");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+          Alterar Senha
+        </h3>
+        {userEmail && (
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            Usuário: {userEmail}
+          </p>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label>Senha Atual</Label>
+            <InputField
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="Digite sua senha atual"
+            />
+          </div>
+
+          <div>
+            <Label>Nova Senha</Label>
+            <InputField
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Digite a nova senha"
+            />
+          </div>
+
+          <div>
+            <Label>Confirmar Nova Senha</Label>
+            <InputField
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirme a nova senha"
+            />
+          </div>
+
+          {error && (
+            <div className="text-red-500 text-sm">{error}</div>
+          )}
+
+          <div className="flex gap-3 pt-4">
+            <Button
+              onClick={onClose}
+              className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700"
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <button
+              type="submit"
+              className="flex-1 bg-brand-600 hover:bg-brand-700 text-white py-2 px-4 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading}
+            >
+              {loading ? "Alterando..." : "Alterar Senha"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 type BreadcrumbItem = {
   label: string;
@@ -47,6 +173,8 @@ const UsersPage = () => {
   const [showNewUserModal, setShowNewUserModal] = useState<boolean>(false);
   const [showDeleteModal, setShowDeleteModal] = useState<boolean>(false);
   const [userToDelete, setUserToDelete] = useState<UserWithId | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
+  const [userForPasswordChange, setUserForPasswordChange] = useState<UserWithId | null>(null);
 
   // Breadcrumb items
   const breadcrumbItems: BreadcrumbItem[] = [
@@ -287,7 +415,15 @@ const UsersPage = () => {
                               <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V7.5A4.5 4.5 0 0 0 7.5 7.5v3m9 0h-9m9 0v6.75A2.25 2.25 0 0 1 14.25 19.5h-4.5A2.25 2.25 0 0 1 7.5 17.25V10.5m3 3v6m3-6v6" />
                             </svg>
                           </button>
-                          <button className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition duration-200 min-w-[32px] min-h-[32px] flex items-center justify-center" aria-label="Editar" title="Editar">
+                          <button 
+                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition duration-200 min-w-[32px] min-h-[32px] flex items-center justify-center" 
+                            aria-label="Editar" 
+                            title="Alterar Senha"
+                            onClick={() => {
+                              setUserForPasswordChange(user);
+                              setShowPasswordModal(true);
+                            }}
+                          >
                             <svg className="h-5 w-5 aspect-square" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24" aria-hidden="true">
                               <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487a2.1 2.1 0 1 1 2.97 2.97L7.5 19.789l-4 1 1-4 13.362-13.302z" />
                             </svg>
@@ -390,6 +526,17 @@ const UsersPage = () => {
           </div>
         </div>
       )}
+      
+      {/* Modal de alteração de senha */}
+      <PasswordChangeModal
+        isOpen={showPasswordModal}
+        onClose={() => {
+          setShowPasswordModal(false);
+          setUserForPasswordChange(null);
+        }}
+        userId={userForPasswordChange?._id}
+        userEmail={userForPasswordChange?.email}
+      />
     </AuthGuard>
   );
 };
