@@ -3,7 +3,12 @@ import React, { useEffect, useState } from "react";
 import { useNoticeSettings } from "@/hooks/useNoticeSettings";
 
 export default function NoticeSettings() {
-  const { settings, save, saving } = useNoticeSettings();
+  const { settings, save, saving, error, loading } = useNoticeSettings();
+  
+  // Log para depuração
+  console.log('NoticeSettings - settings:', settings);
+  console.log('NoticeSettings - loading:', loading);
+  console.log('NoticeSettings - error:', error);
 
   const [enabled, setEnabled] = useState<boolean>(settings.enabled ?? true);
   const [title, setTitle] = useState<string>(settings.title || "");

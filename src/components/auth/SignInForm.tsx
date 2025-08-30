@@ -52,10 +52,16 @@ export default function SignInForm() {
                   const payload = await res.json();
                   const user = payload?.user || payload; // compatibilidade legado
                   const token = payload?.token;
-                  if (token) {
-                    localStorage.setItem('labadmin_token', token);
+                  
+                  if (!token) {
+                    throw new Error('Token não recebido na resposta do servidor');
                   }
+                  
+                  console.log('🔑 Token JWT recebido:', token);
+                  localStorage.setItem('labadmin_token', token);
                   localStorage.setItem('labadmin_user', JSON.stringify(user));
+                  
+                  // Forçar recarregamento completo da página para garantir que todas as configurações sejam carregadas
                   window.location.href = '/';
                 } catch (err) {
                   console.error('Erro no login:', err);

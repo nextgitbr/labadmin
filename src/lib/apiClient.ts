@@ -13,17 +13,34 @@ function buildHeaders(options?: ApiOptions): HeadersInit {
     'Accept': 'application/json',
     ...(options?.headers as any || {}),
   };
+  
   // Content-Type JSON quando enviando body json
   if (options?.json !== undefined && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
-  // Token
+  
+  // Adicionar token JWT se disponível
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('labadmin_token');
-    if (token && !('authorization' in Object.keys(headers).reduce((acc, k) => ({...acc, [k.toLowerCase()]: true}), {}))) {
-      headers['Authorization'] = `Bearer ${token}`;
+    try {
+      const token = localStorage.getItem('labadmin_token');
+      if (token) {
+        // Verificar se já existe um header Authorization
+        const hasAuthHeader = Object.keys(headers).some(
+          k => k.toLowerCase() === 'authorization'
+        );
+        
+        if (!hasAuthHeader) {
+          console.log('🔑 Adicionando token JWT ao cabeçalho da requisição');
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+      } else {
+        console.warn('⚠️ Nenhum token JWT encontrado no localStorage');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao acessar localStorage:', error);
     }
   }
+  
   return headers;
 }
 
