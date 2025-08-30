@@ -1,0 +1,56 @@
+/* Odontograma.css */
+.odontograma-root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#odontograma {
+  display: block;
+}
+
+.tooth {
+  cursor: pointer;
+  transition: filter 0.15s ease;
+}
+
+.tooth path {
+  fill: transparent !important;
+  stroke: #073b4c !important;
+  stroke-width: 2 !important;
+}
+
+/* Normalizar stroke-width específico do dente 11 */
+.tooth[data-label="11"] path {
+  stroke-width: 4 !important;
+}
+
+.tooth:hover path {
+  filter: drop-shadow(0 0 3px rgba(7, 59, 76, 0.4));
+}
+
+/* Dentes com construções dentárias */
+.tooth.has-construction path {
+  fill: var(--construction-color) !important;
+  stroke: white !important;
+  stroke-width: 2 !important;
+}
+
+/* Dentes com construções selecionados */
+.tooth.has-construction.selected path {
+  stroke: white !important;
+  stroke-width: 3 !important;
+}
+
+/* Exemplo de realce/seleção (ajuste conforme sua paleta) */
+.tooth.selected path {
+  stroke: white !important;
+  fill: #073b4c !important;
+  stroke-width: 1 !important;
+}
+
+/* Se quiser destacar dentes com serviço atribuído, adicione outra classe, ex.: .assigned */
+.tooth.assigned path {
+  stroke: #ef6c00;
+  fill: rgba(239, 108, 0, 0.15);
+}

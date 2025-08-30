@@ -1,0 +1,20 @@
+.welcomeGradient {
+  background: linear-gradient(305deg, #6366f1 0%, #3499cb 40%, #3b82f6 60%, #6366f1 100%);
+  background-size: 200% 100%;
+  animation: moveGreen 8s ease-in-out infinite alternate;
+}
+
+@keyframes moveGreen {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.welcomeGradientDark {
+  background: linear-gradient(90deg, #4338ca 0%, #00ffd8 40%, #1e40af 60%, #4338ca 100%);
+  background-size: 200% 100%;
+  animation: moveGreen 8s ease-in-out infinite alternate;
+}
