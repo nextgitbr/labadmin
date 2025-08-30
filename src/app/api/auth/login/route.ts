@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { verifyPassword } from '@/lib/crypto';
+import { generateToken } from '@/lib/jwt';
 import { requireSupabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const runtime = 'nodejs';
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
       console.error('[LOGIN] Sem conexão de banco. Defina POSTGRES_URL/POSTGRES_PRISMA_URL/POSTGRES_URL_NON_POOLING ou DATABASE_URL/PG_URI');
       return NextResponse.json({ error: 'Configuração de banco ausente' }, { status: 500 });
     }
+    
     const body = await req.json();
     const { email, password } = body || {};
 
@@ -57,76 +59,138 @@ export async function POST(req: NextRequest) {
     }
 
     console.log('[LOGIN] Tentando autenticar', { email });
-    let rows: any[] = [];
+    
+    let user;
     try {
-      const res = await pool.query(`select * from public.users where lower(email) = lower($1) limit 1`, [String(email).trim()]);
-      rows = res.rows || [];
-    } catch (e: any) {
-      console.error('[LOGIN] Erro ao autenticar no Supabase:', e?.message || e);
-      const hasUrl = !!process.env.SUPABASE_URL;
-      const hasKey = !!(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY);
-      const hint = !hasUrl || !hasKey ? 'Variáveis SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY ausentes' : 'Falha no provedor de autenticação';
-      return NextResponse.json({ error: hint }, { status: 500 });
+      const query = `
+        SELECT * 
+        FROM public.users 
+        WHERE LOWER(email) = LOWER($1) 
+        LIMIT 1
+      `;
+      const result = await pool.query(query, [email.trim().toLowerCase()]);
+      user = result.rows[0];
+    } catch (error: any) {
+      console.error('[LOGIN] Erro ao buscar usuário:', error?.message || error);
+      return NextResponse.json(
+        { error: 'Erro ao processar a autenticação' }, 
+        { status: 500 }
+      );
     }
 
-    const user = rows[0] as { password: string | null } & Record<string, any>;
-    if (!user.password || !verifyPassword(String(password), user.password)) {
+    if (!user) {
+      console.warn('[LOGIN] Usuário não encontrado');
+      return NextResponse.json(
+        { error: 'Credenciais inválidas' }, 
+        { status: 401 }
+      );
+    }
+
+    // Verificar senha
+    if (!user.password || !verifyPassword(password, user.password)) {
       console.warn('[LOGIN] Senha inválida');
-      return NextResponse.json({ error: 'Credenciais inválidas' }, { status: 401 });
+      return NextResponse.json(
+        { error: 'Credenciais inválidas' }, 
+        { status: 401 }
+      );
     }
 
-    // Opcional: verificar se ativo
-    if (user.active === false || user.is_active === false) {
+    // Verificar se o usuário está ativo
+    if (user.is_active === false) {
       console.warn('[LOGIN] Usuário inativo');
-      return NextResponse.json({ error: 'Usuário inativo' }, { status: 403 });
+      return NextResponse.json(
+        { error: 'Esta conta está desativada' }, 
+        { status: 403 }
+      );
     }
 
-    const safeUser = mapUserRow(user);
-
-    // Token dummy para teste
-    let token: string | null = 'dummy-token';
-
-    // Autenticar no Supabase para obter um access_token (Bearer)
+    // Tentar sincronizar com Supabase Auth se necessário
+    console.log('[LOGIN] Verificando sincronização com Supabase Auth...');
     try {
       const supabase = requireSupabaseAdmin();
+      const { data: existingUser } = await supabase.auth.admin.getUserById(user.auth_user_id || user.id);
+      
+      if (!existingUser.user) {
+        console.log('[LOGIN] Usuário não encontrado no Supabase Auth, tentando sincronizar...');
+        // Tentar criar usuário no Supabase Auth
+        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          email: user.email,
+          password: password, // Usar a senha fornecida
+          options: {
+            data: {
+              synced_from_postgres: true,
+              postgres_user_id: user.id
+            }
+          }
+        });
 
-      // Tenta sign-in diretamente; se falhar por credenciais, cria e tenta novamente
-      let { data: sessionData, error: sessionError } = await supabase.auth.signInWithPassword({ email, password });
-      if (sessionError || !sessionData?.session?.access_token) {
-        console.warn('[LOGIN] Sign-in inicial falhou, tentando provisionar usuário e repetir login...', sessionError?.message);
-        const { error: createErr } = await supabase.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: false,
-          user_metadata: { app_user_id: safeUser.id },
-        } as any);
-        if (createErr) {
-          // Se o erro for "User already registered" or similar, seguimos para tentar login novamente
-          console.warn('[LOGIN] createUser retornou erro, possivelmente já existente:', createErr?.message);
+        if (signUpError && signUpError.message !== 'User already registered') {
+          console.error('[LOGIN] Erro ao sincronizar usuário:', signUpError.message);
+        } else if (signUpData.user) {
+          console.log('[LOGIN] Usuário sincronizado com Supabase Auth:', signUpData.user.id);
+          
+          // Atualizar auth_user_id no Postgres se necessário
+          if (!user.auth_user_id) {
+            await pool.query(
+              'UPDATE public.users SET auth_user_id = $1 WHERE id = $2',
+              [signUpData.user.id, user.id]
+            );
+            console.log('[LOGIN] auth_user_id atualizado no Postgres');
+          }
+
+          // Confirmar email automaticamente para desenvolvimento
+          if (!signUpData.user.email_confirmed_at) {
+            const { error: confirmError } = await supabase.auth.admin.updateUserById(
+              signUpData.user.id,
+              { email_confirm: true }
+            );
+            if (confirmError) {
+              console.warn('[LOGIN] Não foi possível confirmar email automaticamente:', confirmError.message);
+            } else {
+              console.log('[LOGIN] Email confirmado automaticamente');
+            }
+          }
         }
-        // Tentar sign-in novamente
-        const retry = await supabase.auth.signInWithPassword({ email, password });
-        sessionData = retry.data;
-        sessionError = retry.error;
       }
-
-      if (sessionError || !sessionData?.session?.access_token) {
-        console.error('[LOGIN] Falha ao obter token do Supabase após tentativa:', sessionError?.message);
-        return NextResponse.json({ error: 'Falha de autenticação (token)' }, { status: 401 });
-      }
-      token = sessionData.session.access_token;
-    } catch (e: any) {
-      console.error('[LOGIN] Erro ao autenticar no Supabase:', e?.message || e);
-      const hasUrl = !!process.env.SUPABASE_URL;
-      const hasKey = !!(process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY);
-      const hint = !hasUrl || !hasKey ? 'Variáveis SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY ausentes' : 'Falha no provedor de autenticação';
-      return NextResponse.json({ error: hint }, { status: 500 });
+    } catch (syncError: any) {
+      console.warn('[LOGIN] Aviso: erro na sincronização com Supabase Auth (continuando com JWT):', syncError.message);
+      // Não bloquear o login se a sincronização falhar
     }
 
-    console.log('[LOGIN] Sucesso', { id: safeUser.id, email: safeUser.email });
-    return NextResponse.json({ user: safeUser, token }, { status: 200 });
+    // Mapear dados do usuário para retorno
+    const userData = mapUserRow(user);
+    
+    // Gerar token JWT
+    const token = generateToken({
+      userId: userData.id,
+      email: userData.email,
+      role: userData.role,
+      permissions: userData.permissions
+    });
+
+    console.log('[LOGIN] Autenticação bem-sucedida', { 
+      id: userData.id, 
+      email: userData.email,
+      role: userData.role
+    });
+    
+    // Retornar dados do usuário e token JWT
+    return NextResponse.json({ 
+      user: userData, 
+      token,
+      expiresIn: '7d' // Informar ao cliente quando o token expira
+    }, { 
+      status: 200,
+      headers: {
+        'Set-Cookie': `auth_token=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${7 * 24 * 60 * 60}${process.env.NODE_ENV === 'production' ? '; Secure' : ''}`
+      }
+    });
+
   } catch (error) {
     console.error('❌ Erro no login:', error);
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Erro interno do servidor' }, 
+      { status: 500 }
+    );
   }
 }

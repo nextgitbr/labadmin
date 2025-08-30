@@ -5,22 +5,101 @@ import { Client } from 'pg';
 export type AuthUser = {
   id: string;
   email?: string | null;
+  role?: string;
+  permissions?: Record<string, boolean>;
 };
+
+import { verifyToken } from './jwt';
 
 export async function requireAuth(req: NextRequest): Promise<AuthUser> {
   const authHeader = req.headers.get('authorization') || req.headers.get('Authorization');
   if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
-    throw Object.assign(new Error('Unauthorized'), { status: 401 });
+    throw Object.assign(new Error('Missing or invalid Authorization header'), { status: 401 });
   }
+  
   const token = authHeader.split(' ')[1];
-  if (!token) throw Object.assign(new Error('Unauthorized'), { status: 401 });
-
-  const supabase = requireSupabaseAdmin();
-  const { data, error } = await supabase.auth.getUser(token);
-  if (error || !data?.user) {
-    throw Object.assign(new Error('Unauthorized'), { status: 401 });
+  if (!token) {
+    throw Object.assign(new Error('No token provided'), { status: 401 });
   }
-  return { id: data.user.id, email: data.user.email };
+
+  try {
+    // Primeiro tenta validar como JWT
+    const jwtPayload = verifyToken(token);
+    if (jwtPayload) {
+      console.log('✅ Autenticação JWT válida para usuário:', jwtPayload.userId);
+      return { 
+        id: jwtPayload.userId, 
+        email: jwtPayload.email,
+        role: jwtPayload.role,
+        permissions: jwtPayload.permissions
+      };
+    }
+
+    // Se não for JWT válido, tenta como token do Supabase
+    console.log('🔍 Token não é JWT válido, tentando autenticação Supabase...');
+    const supabase = requireSupabaseAdmin();
+    const { data, error } = await supabase.auth.getUser(token);
+    
+    if (error || !data?.user) {
+      console.error('❌ Falha na autenticação Supabase:', error?.message || 'Usuário não encontrado');
+      throw Object.assign(new Error('Credenciais inválidas ou expiradas'), { status: 401 });
+    }
+
+    console.log('✅ Autenticação Supabase válida para usuário:', data.user.email);
+    return { 
+      id: data.user.id, 
+      email: data.user.email 
+    };
+  } catch (error: any) {
+    console.error('❌ Erro na autenticação:', error.message);
+    throw Object.assign(new Error('Falha na autenticação'), { 
+      status: error.status || 401,
+      cause: error 
+    });
+  }
+}
+
+// Função para sincronizar usuário do Postgres para Supabase Auth
+async function syncUserToSupabaseAuth(email: string, password: string) {
+  try {
+    console.log('🔄 Tentando sincronizar usuário para Supabase Auth:', email);
+    const supabase = requireSupabaseAdmin();
+    
+    // Tenta fazer signup do usuário no Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          synced_from_postgres: true,
+        }
+      }
+    });
+
+    if (error) {
+      console.error('❌ Erro ao sincronizar usuário no Supabase Auth:', error.message);
+      return null;
+    }
+
+    if (data.user && !data.user.email_confirmed_at) {
+      console.log('⚠️ Usuário criado no Supabase Auth, mas email não confirmado');
+      // Para desenvolvimento, podemos confirmar automaticamente
+      const { error: confirmError } = await supabase.auth.admin.updateUserById(
+        data.user.id,
+        { email_confirm: true }
+      );
+      if (confirmError) {
+        console.error('❌ Erro ao confirmar email:', confirmError.message);
+      } else {
+        console.log('✅ Email confirmado automaticamente');
+      }
+    }
+
+    return data.user;
+  } catch (error: any) {
+    console.error('❌ Erro ao sincronizar usuário:', error.message);
+    return null;
+  }
 }
 
 export function assertRole(userRole: string | null | undefined, allowed: string[]) {
