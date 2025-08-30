@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client } from 'pg';
 
-const PG_URI = (process.env.PG_URI as string | undefined) || (process.env.DATABASE_URL as string | undefined);
+// Aceitar múltiplos nomes de variável de conexão para ambientes diferentes
+const PG_URI =
+  (process.env.PG_URI as string | undefined)
+  || (process.env.DATABASE_URL as string | undefined)
+  || (process.env.POSTGRES_URL as string | undefined)
+  || (process.env.POSTGRES_PRISMA_URL as string | undefined);
 
 async function getPg() {
-  if (!PG_URI) throw new Error('PG_URI/DATABASE_URL not set');
+  if (!PG_URI) throw new Error('No PostgreSQL connection string found. Set one of: PG_URI, DATABASE_URL, POSTGRES_URL or POSTGRES_PRISMA_URL');
   const client = new Client({ connectionString: PG_URI, ssl: { rejectUnauthorized: false } });
   await client.connect();
   return client;
