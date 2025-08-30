@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client as PgClient } from 'pg';
+import '@/lib/sslFix'; // Aplicar correção SSL global
 
 // Fallbacks de conexão para Postgres
 const PG_CONN =
