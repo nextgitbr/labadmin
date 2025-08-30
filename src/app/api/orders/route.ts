@@ -321,7 +321,25 @@ async function generateCustomOrderId(workType: string, selectedMaterial: string,
 // POST /api/orders - criar novo pedido
 export async function POST(req: NextRequest) {
   try {
-    try { await requireAuth(req); } catch (e: any) { return NextResponse.json({ error: 'Unauthorized' }, { status: e?.status || 401 }); }
+    // Autenticação com tratamento de erro aprimorado
+    let user;
+    try {
+      user = await requireAuth(req);
+      console.log('✅ Autenticação bem-sucedida para usuário:', user.email || user.id);
+    } catch (authError: any) {
+      console.error('❌ Falha na autenticação:', authError.message);
+      console.error('🔍 Headers recebidos:', {
+        authorization: req.headers.get('authorization') ? '[PRESENT]' : '[MISSING]',
+        contentType: req.headers.get('content-type'),
+        userAgent: req.headers.get('user-agent')
+      });
+      return NextResponse.json({
+        error: 'Autenticação necessária',
+        details: 'Token JWT ou Supabase inválido/ausente',
+        code: 'AUTH_REQUIRED'
+      }, { status: 401 });
+    }
+
     const data = await req.json();
 
     // Validações básicas
