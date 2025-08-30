@@ -1,4 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
+// Opcional: permitir ignorar validação TLS em ambientes com proxy/certificados self-signed
+// Ative definindo SUPABASE_INSECURE_SSL=1 (NÃO recomendado em produção permanente)
+try {
+  if (process.env.SUPABASE_INSECURE_SSL === '1') {
+    // undici está disponível no Node 18+ usado pela Vercel
+    const undici = require('undici');
+    if (undici?.setGlobalDispatcher && undici?.Agent) {
+      const agent = new undici.Agent({ connect: { rejectUnauthorized: false } });
+      undici.setGlobalDispatcher(agent);
+      console.warn('[supabaseAdmin] TLS validation disabled via undici Agent (SUPABASE_INSECURE_SSL=1). Use apenas temporariamente.');
+    }
+    // Fallback adicional
+    // @ts-ignore
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  }
+} catch {}
 
 const SUPABASE_URL = process.env.SUPABASE_URL as string | undefined;
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY) as string | undefined;

@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client } from 'pg';
 
-const PG_URI = (process.env.PG_URI as string | undefined) || (process.env.DATABASE_URL as string | undefined);
+// Fallbacks de conexão para Postgres em diferentes ambientes
+const PG_URI =
+  (process.env.PG_URI as string | undefined) ||
+  (process.env.DATABASE_URL as string | undefined) ||
+  (process.env.POSTGRES_URL as string | undefined) ||
+  (process.env.POSTGRES_PRISMA_URL as string | undefined) ||
+  (process.env.POSTGRES_URL_NON_POOLING as string | undefined);
 const LOCALE_DEFAULT = process.env.APP_LOCALE_DEFAULT || 'pt-BR';
 
 async function getPg() {
-  if (!PG_URI) throw new Error('PG_URI/DATABASE_URL not set');
-  const client = new Client({ connectionString: PG_URI, ssl: { rejectUnauthorized: false } });
+  if (!PG_URI) throw new Error('Sem conexão Postgres: defina PG_URI/DATABASE_URL/POSTGRES_URL/POSTGRES_PRISMA_URL/POSTGRES_URL_NON_POOLING');
+  const needsSsl = /supabase\.(co|com)/.test(PG_URI) || /sslmode=require/i.test(PG_URI);
+  const client = new Client({ connectionString: PG_URI, ssl: needsSsl ? { rejectUnauthorized: false } : undefined });
   await client.connect();
   return client;
 }
