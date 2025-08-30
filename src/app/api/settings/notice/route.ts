@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client } from 'pg';
+import '@/lib/sslFix'; // Aplicar correção SSL global
 
 // Aceitar múltiplos nomes de variável de conexão para ambientes diferentes
 const PG_URI =

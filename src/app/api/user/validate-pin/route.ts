@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { decrypt } from '@/lib/crypto';
+import '@/lib/sslFix'; // Aplicar correção SSL global
 
 // Postgres pool com fallbacks e SSL condicional
 const PG_CONN =
