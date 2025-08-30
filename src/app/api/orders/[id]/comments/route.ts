@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 
-// Postgres pool (Supabase/PG)
-const PG_CONN = process.env.PG_URI || process.env.DATABASE_URL;
+// Postgres pool (Supabase/PG) com fallbacks de conexão
+const PG_CONN = process.env.PG_URI || 
+                process.env.DATABASE_URL || 
+                process.env.POSTGRES_URL || 
+                process.env.POSTGRES_PRISMA_URL || 
+                process.env.POSTGRES_URL_NON_POOLING;
+
 const pool = new Pool({
   connectionString: PG_CONN,
-  ssl: PG_CONN?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
+  ssl: PG_CONN?.includes('supabase.co') || PG_CONN?.includes('vercel') ? { rejectUnauthorized: false } : undefined,
 });
 
 function isNumericId(val: string | null): boolean {
@@ -14,12 +19,17 @@ function isNumericId(val: string | null): boolean {
 }
 
 async function getOrderRowById(id: string) {
-  if (isNumericId(id)) {
-    const res = await pool.query(`select * from public.orders where id = $1 and coalesce(is_active, true) = true limit 1`, [Number(id)]);
-    return res.rows[0];
-  } else {
-    const res = await pool.query(`select * from public.orders where external_id = $1 and coalesce(is_active, true) = true limit 1`, [id]);
-    return res.rows[0];
+  try {
+    if (isNumericId(id)) {
+      const res = await pool.query(`select * from public.orders where id = $1 and coalesce(is_active, true) = true limit 1`, [Number(id)]);
+      return res.rows[0];
+    } else {
+      const res = await pool.query(`select * from public.orders where external_id = $1 and coalesce(is_active, true) = true limit 1`, [id]);
+      return res.rows[0];
+    }
+  } catch (error) {
+    console.error('❌ Erro ao buscar pedido:', error);
+    throw error;
   }
 }
 
@@ -43,13 +53,19 @@ async function notifyUser(userId: string, type: NotifyType, title: string, messa
     console.error('⚠️ Falha ao inserir notificação (comentário):', e);
   }
 }
+
 async function getTeamUsers() {
-  const roles = ['administrator', 'admin', 'manager', 'tecnico', 'atendente'];
-  const { rows } = await pool.query(
-    `select id, email from public.users where role = any($1::text[]) and coalesce(is_active, true) = true and coalesce(active::boolean, true) = true`,
-    [roles]
-  );
-  return rows.map((r: any) => ({ id: String(r.id), email: String(r.email || '') }));
+  try {
+    const roles = ['administrator', 'admin', 'manager', 'tecnico', 'atendente'];
+    const { rows } = await pool.query(
+      `select id, email from public.users where role = any($1::text[]) and coalesce(is_active, true) = true and coalesce(active::boolean, true) = true`,
+      [roles]
+    );
+    return rows.map((r: any) => ({ id: String(r.id), email: String(r.email || '') }));
+  } catch (error) {
+    console.error('❌ Erro ao buscar usuários da equipe:', error);
+    return [];
+  }
 }
 
 // Não precisamos mais detectar storage; usaremos a tabela public.order_comments
@@ -60,25 +76,37 @@ export async function POST(
   context: any
 ) {
   try {
+    console.log('📝 Iniciando adição de comentário...');
+    
     const { id } = (context?.params || {}) as { id: string };
     if (!id) {
+      console.error('❌ ID do pedido não fornecido');
       return NextResponse.json({ error: 'ID do pedido é obrigatório' }, { status: 400 });
     }
+
+    console.log('📋 ID do pedido:', id);
 
     const formData = await req.formData();
     const message = String(formData.get('message') || '').trim();
     const userName = String(formData.get('userName') || 'Usuário');
     const userRole = String(formData.get('userRole') || 'user');
 
+    console.log('📝 Dados do comentário:', { message, userName, userRole });
+
     if (!message) {
+      console.error('❌ Mensagem vazia');
       return NextResponse.json({ error: 'Mensagem é obrigatória' }, { status: 400 });
     }
 
     // Verificar se pedido existe
+    console.log('🔍 Buscando pedido...');
     const order = await getOrderRowById(id);
     if (!order) {
+      console.error('❌ Pedido não encontrado:', id);
       return NextResponse.json({ error: 'Pedido não encontrado' }, { status: 404 });
     }
+
+    console.log('✅ Pedido encontrado:', order.id, order.order_number);
 
     // Processar anexos: preferir 'uploaded' (JSON com urls) e manter fallback para arquivos crus
     let attachments: { name: string; size: number; type: string; url?: string; path?: string; bucket?: string }[] = [];
@@ -97,7 +125,7 @@ export async function POST(
           }));
         }
       } catch (e) {
-        console.warn('Falha ao parsear campo uploaded (JSON) em comentários:', e);
+        console.warn('⚠️ Falha ao parsear campo uploaded (JSON) em comentários:', e);
       }
     }
     if (attachments.length === 0) {
@@ -110,6 +138,8 @@ export async function POST(
         } catch {}
       }
     }
+
+    console.log('📎 Anexos processados:', attachments.length);
 
     // Gerar id simples para o comentário (compat)
     const commentId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -125,10 +155,15 @@ export async function POST(
       attachments,
     };
 
+    console.log('💾 Inserindo comentário na base de dados...');
+
     // Inserir na tabela de comentários
     // Obter id numérico do pedido para FK
     const orderRow = await getOrderRowById(id);
     const orderIdNum = Number(orderRow.id);
+    
+    console.log('🔢 ID numérico do pedido:', orderIdNum);
+    
     await pool.query(
       `insert into public.order_comments (order_id, user_id, user_name, user_role, message, attachments, is_internal, created_at)
        values ($1,$2,$3,$4,$5,$6,$7,$8)`,
@@ -143,11 +178,17 @@ export async function POST(
         new Date(newComment.createdAt as any),
       ]
     );
+    
+    console.log('✅ Comentário inserido com sucesso');
+    
     // Atualizar updated_at do pedido
     await pool.query(`update public.orders set updated_at = now() where id = $1`, [orderIdNum]);
+    
+    console.log('✅ Pedido atualizado');
 
     // --- Disparo de Notificações ---
     try {
+      console.log('📢 Enviando notificações...');
       const orderNumber = orderRow.order_number as string;
       const title = `Novo comentário no pedido ${orderNumber}`;
       const message = `${newComment.userName}: ${newComment.message}`;
@@ -161,25 +202,35 @@ export async function POST(
         const creator = orderRow.created_by;
         if (creator !== null && creator !== undefined && String(creator).length > 0) {
           await notifyUser(String(creator), 'comment_added', title, message, dataPayload);
+          console.log('📧 Notificação enviada para criador:', creator);
         }
         const assigned = orderRow.assigned_to;
         if (assigned !== null && assigned !== undefined && String(assigned).length > 0) {
           await notifyUser(String(assigned), 'comment_added', title, message, dataPayload);
+          console.log('📧 Notificação enviada para técnico:', assigned);
         }
       } else {
         // Usuário/cliente comentou -> notificar toda a equipe
         const team = await getTeamUsers();
+        console.log('👥 Notificando equipe:', team.length, 'usuários');
         for (const u of team) {
           await notifyUser(String(u.id), 'comment_added', title, message, dataPayload);
         }
       }
+      console.log('✅ Notificações enviadas');
     } catch (e) {
       console.error('⚠️ Falha no disparo de notificações (comentário):', e);
     }
 
+    console.log('🎉 Comentário adicionado com sucesso');
     return NextResponse.json({ success: true, comment: newComment });
-  } catch (error) {
-    console.error('Erro ao adicionar comentário (PG):', error);
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+  } catch (error: any) {
+    console.error('❌ Erro ao adicionar comentário (PG):', error);
+    console.error('❌ Stack trace:', error?.stack);
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor', 
+      details: error?.message || 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 }
