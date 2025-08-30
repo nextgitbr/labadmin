@@ -148,14 +148,20 @@ export async function POST(req: NextRequest) {
 // PATCH /api/notifications - marcar como lida/não lida
 export async function PATCH(req: NextRequest) {
   try {
+    console.log('🔄 Iniciando atualização de notificação...');
+    
     const { searchParams } = new URL(req.url!);
     const id = searchParams.get('id');
     const userId = searchParams.get('userId');
     const markAllAsRead = searchParams.get('markAllAsRead') === 'true';
 
+    console.log('📋 Parâmetros recebidos:', { id, userId, markAllAsRead });
+
     const body = await req.json().catch(() => ({}));
+    console.log('📝 Body da requisição:', body);
 
     if (markAllAsRead && userId) {
+      console.log('📚 Marcando todas as notificações como lidas para userId:', userId);
       const { rowCount } = await pool.query(
         `update public.notifications
          set data = jsonb_set(data, '{isRead}', 'true'::jsonb, true),
@@ -169,12 +175,30 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (!id) {
+      console.error('❌ ID da notificação não fornecido');
       return NextResponse.json({ error: 'ID da notificação é obrigatório' }, { status: 400 });
     }
+    
     const idNum = parseInt(String(id), 10);
     if (!Number.isFinite(idNum)) {
+      console.error('❌ ID da notificação inválido:', id);
       return NextResponse.json({ error: 'ID da notificação inválido' }, { status: 400 });
     }
+
+    console.log('🔢 ID numérico da notificação:', idNum);
+
+    // Verificar se a notificação existe antes de atualizar
+    const { rows: existingRows } = await pool.query(
+      `select id, data from public.notifications where id = $1`,
+      [idNum]
+    );
+
+    if (existingRows.length === 0) {
+      console.error('❌ Notificação não encontrada:', idNum);
+      return NextResponse.json({ error: 'Notificação não encontrada' }, { status: 404 });
+    }
+
+    console.log('✅ Notificação encontrada:', existingRows[0].id);
 
     // Atualização específica: suportar isRead, title, message, data, expiresAt
     const patches: string[] = [];
@@ -185,6 +209,7 @@ export async function PATCH(req: NextRequest) {
 
     if (typeof body.isRead !== 'undefined') {
       patches.push(`data = jsonb_set(data, '{isRead}', to_jsonb($${params.push(Boolean(body.isRead))}::boolean), true)`);
+      console.log('📖 Marcando isRead como:', Boolean(body.isRead));
     }
     if (typeof body.title === 'string') {
       patches.push(`data = jsonb_set(data, '{title}', to_jsonb($${params.push(body.title)}::text), true)`);
@@ -206,7 +231,10 @@ export async function PATCH(req: NextRequest) {
 
     if (patches.length === 1) { // apenas updatedAt
       patches.push(`data = jsonb_set(data, '{isRead}', to_jsonb(true), true)`);
+      console.log('📖 Marcando como lida por padrão');
     }
+
+    console.log('🔧 Patches a aplicar:', patches.length);
 
     const setSql = patches.join(', ');
     const { rowCount } = await pool.query(
@@ -214,7 +242,10 @@ export async function PATCH(req: NextRequest) {
       params
     );
 
+    console.log('📊 Linhas afetadas:', rowCount);
+
     if (rowCount === 0) {
+      console.error('❌ Nenhuma linha foi atualizada para ID:', idNum);
       return NextResponse.json({ error: 'Notificação não encontrada' }, { status: 404 });
     }
 
@@ -225,9 +256,14 @@ export async function PATCH(req: NextRequest) {
     const updated = mapRowToNotification(rows[0]);
     console.log('✅ Notificação atualizada (PG):', id);
     return NextResponse.json(updated);
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Erro ao atualizar notificação (PG):', error);
-    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
+    console.error('❌ Stack trace:', error?.stack);
+    return NextResponse.json({ 
+      error: 'Erro interno do servidor',
+      details: error?.message || 'Erro desconhecido',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 }
 
