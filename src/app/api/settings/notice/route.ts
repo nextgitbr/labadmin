@@ -6,11 +6,13 @@ const PG_URI =
   (process.env.PG_URI as string | undefined)
   || (process.env.DATABASE_URL as string | undefined)
   || (process.env.POSTGRES_URL as string | undefined)
-  || (process.env.POSTGRES_PRISMA_URL as string | undefined);
+  || (process.env.POSTGRES_PRISMA_URL as string | undefined)
+  || (process.env.POSTGRES_URL_NON_POOLING as string | undefined);
 
 async function getPg() {
-  if (!PG_URI) throw new Error('No PostgreSQL connection string found. Set one of: PG_URI, DATABASE_URL, POSTGRES_URL or POSTGRES_PRISMA_URL');
-  const client = new Client({ connectionString: PG_URI, ssl: { rejectUnauthorized: false } });
+  if (!PG_URI) throw new Error('Sem conexão Postgres: defina PG_URI/DATABASE_URL/POSTGRES_URL/POSTGRES_PRISMA_URL/POSTGRES_URL_NON_POOLING');
+  const needsSsl = /supabase\.(co|com)/.test(PG_URI) || /sslmode=require/i.test(PG_URI);
+  const client = new Client({ connectionString: PG_URI, ssl: needsSsl ? { rejectUnauthorized: false } : undefined });
   await client.connect();
   return client;
 }
