@@ -622,33 +622,79 @@ export async function PATCH(req: NextRequest) {
         // Se não existir produção, não criar aqui. A criação ocorrerá via Kanban/produção.
       }
 
-      // 2) Ao entrar em in_progress, atualizar produção caso exista. Não criar automaticamente.
-      if (shouldEnsureProduction) {
-        // Tenta atualizar produção existente; se não existir, não faz nada
-        const updParams = [
-          orderIdNum,
-          String(updated.work_type || ''),
-          String(updated.selected_material || ''),
-          'iniciado',
-          operadorId,
-          operadorName,
-          updated.estimated_delivery || null,
-        ];
-        const updRes = await pool.query(
-          `update public.production
-             set work_type = $2,
-                 material = $3,
-                 is_active = true,
-                 updated_at = now(),
-                 stage_id = coalesce(stage_id, $4),
-                 operador_id = coalesce($5, operador_id),
-                 operador_name = coalesce($6, operador_name),
-                 estimated_delivery = coalesce($7, estimated_delivery)
-           where order_id = $1
-           returning id`,
-          updParams
+      // 2) Ao entrar em produção, criar job automaticamente se não existir
+      const isMovingToProduction = typeof data.status !== 'undefined' && 
+        (data.status === 'em produção' || data.status === 'em producao' || data.status === 'in_progress');
+      
+      if (isMovingToProduction || shouldEnsureProduction) {
+        console.log('🏭 Verificando/criando job de produção para pedido:', orderIdNum);
+        
+        // Primeiro, verificar se já existe
+        const existingProd = await pool.query(
+          `select id from public.production where order_id = $1 and coalesce(is_active, true) = true limit 1`,
+          [orderIdNum]
         );
-        // Sem upsert: se não existia, deixa para o fluxo do Kanban criar na produção.
+        
+        if (existingProd.rowCount === 0) {
+          // Criar novo job de produção
+          console.log('➕ Criando novo job de produção...');
+          const insertParams = [
+            orderIdNum, // order_id
+            updated.order_number || null, // code
+            String(updated.work_type || ''), // work_type
+            String(updated.selected_material || ''), // material
+            'iniciado', // stage_id inicial
+            operadorId, // operador_id
+            operadorName, // operador_name
+            null, // lote
+            JSON.stringify([]), // cam_files
+            JSON.stringify([]), // cad_files
+            null, // priority
+            updated.estimated_delivery || null, // estimated_delivery
+            null, // actual_delivery
+            JSON.stringify({}), // data
+            true // is_active
+          ];
+          
+          const prodResult = await pool.query(
+            `insert into public.production (
+              order_id, code, work_type, material, stage_id, operador_id, operador_name, lote,
+              cam_files, cad_files, priority, estimated_delivery, actual_delivery, data, is_active
+            ) values (
+              $1,$2,$3,$4,$5,$6,$7,$8,
+              $9::jsonb,$10::jsonb,$11,$12,$13,$14::jsonb,$15
+            ) returning id`,
+            insertParams
+          );
+          
+          console.log('✅ Job de produção criado:', prodResult.rows[0]?.id);
+        } else {
+          // Atualizar job existente
+          console.log('🔄 Atualizando job de produção existente...');
+          const updParams = [
+            orderIdNum,
+            String(updated.work_type || ''),
+            String(updated.selected_material || ''),
+            'iniciado',
+            operadorId,
+            operadorName,
+            updated.estimated_delivery || null,
+          ];
+          await pool.query(
+            `update public.production
+               set work_type = $2,
+                   material = $3,
+                   is_active = true,
+                   updated_at = now(),
+                   stage_id = coalesce(stage_id, $4),
+                   operador_id = coalesce($5, operador_id),
+                   operador_name = coalesce($6, operador_name),
+                   estimated_delivery = coalesce($7, estimated_delivery)
+             where order_id = $1`,
+            updParams
+          );
+          console.log('✅ Job de produção atualizado');
+        }
       }
     } catch (e) {
       console.error('⚠️ Falha ao sincronizar job de produção no PATCH /orders:', e);
