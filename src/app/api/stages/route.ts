@@ -2,11 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Client } from 'pg';
 import { requireAuth } from '@/lib/apiAuth';
 
+// Fallbacks de conexão para Postgres
+const PG_CONN =
+  process.env.PG_URI ||
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL_NON_POOLING;
+
 function getPg() {
-  const conn = (process.env.PG_URI as string | undefined) || (process.env.DATABASE_URL as string | undefined);
-  if (!conn) throw new Error('PG_URI/DATABASE_URL não configurado');
-  const ssl = conn?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined;
-  return new Client({ connectionString: conn, ssl });
+  if (!PG_CONN) throw new Error('Sem conexão Postgres: defina PG_URI/DATABASE_URL/POSTGRES_URL/POSTGRES_PRISMA_URL/POSTGRES_URL_NON_POOLING');
+  const needsSsl = /supabase\.(co|com)/.test(PG_CONN) || /sslmode=require/i.test(PG_CONN);
+  const ssl = needsSsl ? { rejectUnauthorized: false } : undefined;
+  return new Client({ connectionString: PG_CONN, ssl });
 }
 
 // Helpers simples para derivar cores padrão quando não fornecidas

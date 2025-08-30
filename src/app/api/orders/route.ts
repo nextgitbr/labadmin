@@ -4,11 +4,18 @@ import { addBusinessDays } from '@/utils/businessDays';
 import { requireSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { requireAuth } from '@/lib/apiAuth';
 
-// Postgres pool (Supabase/PG)
-const PG_CONN = process.env.PG_URI || process.env.DATABASE_URL;
+// Postgres pool (Supabase/PG) com fallbacks e SSL condicional
+const PG_CONN =
+  process.env.PG_URI ||
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL_NON_POOLING;
 const pool = new Pool({
   connectionString: PG_CONN,
-  ssl: PG_CONN?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
+  ssl: /supabase\.(co|com)/.test(PG_CONN || '') || /sslmode=require/i.test(PG_CONN || '')
+    ? { rejectUnauthorized: false }
+    : undefined,
 });
 
 function mapOrderRow(row: any) {
