@@ -205,17 +205,31 @@ export default function OdontogramaCompleto({ onSubmit, showPatientField = true 
     try {
       console.log('📤 Enviando pedido para API...', orderData);
       
+      // Obter token de autenticação do apiClient
+      const token = localStorage.getItem('labadmin_token');
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado. Faça login novamente.');
+      }
+      
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(orderData),
       });
 
+      console.log('📊 Status da resposta:', response.status);
+      console.log('📊 Headers enviados:', {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token.substring(0, 20)}...` : 'Não encontrado'
+      });
+
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao criar pedido');
+        console.error('❌ Erro da API:', errorData);
+        throw new Error(errorData.message || errorData.error || 'Erro ao criar pedido');
       }
 
       const newOrder = await response.json();

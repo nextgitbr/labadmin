@@ -30,15 +30,48 @@ function PasswordChangeModal({ isOpen, onClose, userId, userEmail }: {
   userId?: string;
   userEmail?: string;
 }) {
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Função para gerar senha segura
+  const generateSecurePassword = () => {
+    const length = Math.floor(Math.random() * 3) + 8; // 8-10 caracteres
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
+    const symbols = '!@#$%&*';
+    
+    const allChars = lowercase + uppercase + numbers + symbols;
+    let password = '';
+    
+    // Garantir pelo menos um caractere de cada tipo
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+    
+    // Preencher o resto aleatoriamente
+    for (let i = 4; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    // Embaralhar a senha
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+  };
+
+  const handleGeneratePassword = () => {
+    const generatedPassword = generateSecurePassword();
+    setNewPassword(generatedPassword);
+    setConfirmPassword(generatedPassword);
+    setShowPassword(true);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentPassword || !newPassword || !confirmPassword) {
+    if (!newPassword || !confirmPassword) {
       setError("Todos os campos são obrigatórios");
       return;
     }
@@ -55,17 +88,17 @@ function PasswordChangeModal({ isOpen, onClose, userId, userEmail }: {
     setError("");
 
     try {
-      const response = await apiClient.post("/api/user/change-password", {
-        currentPassword,
-        newPassword,
+      const response = await apiClient.post("/api/admin/set-password", {
+        email: userEmail,
+        password: newPassword,
       });
 
       if (response.success) {
         alert("Senha alterada com sucesso!");
         onClose();
-        setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
+        setShowPassword(false);
       } else {
         setError(response.message || "Erro ao alterar senha");
       }
@@ -93,29 +126,49 @@ function PasswordChangeModal({ isOpen, onClose, userId, userEmail }: {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label>Senha Atual</Label>
-            <InputField
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              placeholder="Digite sua senha atual"
-            />
-          </div>
-
-          <div>
-            <Label>Nova Senha</Label>
-            <InputField
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Digite a nova senha"
-            />
+            <div className="flex items-center justify-between mb-2">
+              <Label>Nova Senha</Label>
+              <button
+                type="button"
+                onClick={handleGeneratePassword}
+                className="text-xs text-brand-600 hover:text-brand-700 dark:text-brand-400 dark:hover:text-brand-300 font-medium flex items-center gap-1"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Gerar Senha
+              </button>
+            </div>
+            <div className="relative">
+              <InputField
+                type={showPassword ? "text" : "password"}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Digite a nova senha"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              >
+                {showPassword ? (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
 
           <div>
             <Label>Confirmar Nova Senha</Label>
             <InputField
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder="Confirme a nova senha"
