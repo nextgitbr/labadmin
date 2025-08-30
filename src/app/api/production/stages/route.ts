@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { requireAuth } from '@/lib/apiAuth';
+import '@/lib/sslFix'; // Aplicar correção SSL global
 
 // Postgres pool (Supabase/PG) com fallbacks e SSL condicional
 const PG_CONN =

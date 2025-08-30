@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { requireAuth } from '@/lib/apiAuth';
+import '@/lib/sslFix'; // Aplicar correção SSL global
 
-const PG_CONN = process.env.PG_URI || process.env.DATABASE_URL;
+// Postgres pool com fallbacks e SSL condicional
+const PG_CONN =
+  process.env.PG_URI ||
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL_NON_POOLING;
 const pool = new Pool({
   connectionString: PG_CONN,
-  ssl: PG_CONN?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
+  ssl: /supabase\.(co|com)/.test(PG_CONN || '') || /sslmode=require/i.test(PG_CONN || '')
+    ? { rejectUnauthorized: false }
+    : undefined,
 });
 
 function mapComment(row: any) {
