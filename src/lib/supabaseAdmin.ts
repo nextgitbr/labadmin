@@ -1,20 +1,25 @@
 import { createClient } from '@supabase/supabase-js';
-// Opcional: permitir ignorar validação TLS em ambientes com proxy/certificados self-signed
-// Ative definindo SUPABASE_INSECURE_SSL=1 (NÃO recomendado em produção permanente)
+// Correção para SSL na Vercel: forçar bypass de TLS para Supabase
+// Detecta ambiente Vercel e aplica automaticamente
 try {
-  if (process.env.SUPABASE_INSECURE_SSL === '1') {
+  const isVercel = process.env.VERCEL === '1' || process.env.VERCEL_ENV;
+  const forceInsecure = process.env.SUPABASE_INSECURE_SSL === '1';
+  
+  if (isVercel || forceInsecure) {
     // undici está disponível no Node 18+ usado pela Vercel
     const undici = require('undici');
     if (undici?.setGlobalDispatcher && undici?.Agent) {
       const agent = new undici.Agent({ connect: { rejectUnauthorized: false } });
       undici.setGlobalDispatcher(agent);
-      console.warn('[supabaseAdmin] TLS validation disabled via undici Agent (SUPABASE_INSECURE_SSL=1). Use apenas temporariamente.');
+      console.warn('[supabaseAdmin] TLS validation disabled via undici Agent (Vercel environment detected).');
     }
-    // Fallback adicional
+    // Fallback adicional para Node.js
     // @ts-ignore
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
   }
-} catch {}
+} catch (e) {
+  console.warn('[supabaseAdmin] Falha ao configurar undici Agent:', e);
+}
 
 const SUPABASE_URL = process.env.SUPABASE_URL as string | undefined;
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY) as string | undefined;
