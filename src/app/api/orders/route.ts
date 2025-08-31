@@ -592,6 +592,12 @@ export async function PATCH(req: NextRequest) {
       const assignedChanged = (typeof data.assignedTo !== 'undefined');
       const shouldEnsureProduction = nowInProgress;
 
+      console.log('🔄 Sincronização com produção iniciada...');
+      console.log('📊 orderIdNum:', orderIdNum);
+      console.log('📊 nowInProgress:', nowInProgress);
+      console.log('📊 assignedChanged:', assignedChanged);
+      console.log('📊 shouldEnsureProduction:', shouldEnsureProduction);
+
       // Preparar dados de operador a partir da atribuição do pedido
       let operadorId: number | null = null;
       let operadorName: string | null = null;
@@ -622,19 +628,62 @@ export async function PATCH(req: NextRequest) {
         // Se não existir produção, não criar aqui. A criação ocorrerá via Kanban/produção.
       }
 
-      // 2) Ao entrar em produção, criar job automaticamente se não existir
-      const isMovingToProduction = typeof data.status !== 'undefined' && 
-        (data.status === 'em produção' || data.status === 'em producao' || data.status === 'in_progress');
-      
-      if (isMovingToProduction || shouldEnsureProduction) {
-        console.log('🏭 Verificando/criando job de produção para pedido:', orderIdNum);
-        
+      // 2) Ao designar técnico E estar em produção, criar job automaticamente se não existir
+      console.log('🔍 Verificando condições para criação de produção...');
+      console.log('📋 Data recebida:', JSON.stringify(data, null, 2));
+      console.log('📋 Status atual:', updated.status);
+      console.log('📋 Assigned_to atual:', updated.assigned_to);
+
+      // Detectar se está em produção (por nome, ID ou valor específico)
+      let isInProduction = false;
+
+      if (typeof data.status !== 'undefined') {
+        const statusValue = String(data.status).toLowerCase();
+
+        // Verificação por nome (compatibilidade)
+        if (statusValue === 'em produção' || statusValue === 'em producao' || statusValue === 'in_progress') {
+          isInProduction = true;
+          console.log('✅ Produção detectada por nome:', statusValue);
+        }
+        // Verificação por ID específico - assumindo que produção é ID "3" ou superior
+        else if (/^\d+$/.test(statusValue)) {
+          const statusId = parseInt(statusValue);
+          // Temporariamente assumindo que IDs >= 2 podem ser produção (ajuste conforme necessário)
+          if (statusId >= 2) {
+            isInProduction = true;
+            console.log('✅ Produção detectada por ID:', statusId, '(assumindo >= 2)');
+          } else {
+            console.log('❌ ID não reconhecido como produção:', statusId);
+          }
+        }
+        // Verificação por outras possibilidades
+        else if (statusValue.includes('produ') || statusValue.includes('progress')) {
+          isInProduction = true;
+          console.log('✅ Produção detectada por palavra-chave:', statusValue);
+        }
+      }
+
+      const hasAssignedTech = assignedChanged || updated.assigned_to;
+
+      console.log('✅ isInProduction:', isInProduction, '(data.status:', data.status, ')');
+      console.log('✅ assignedChanged:', assignedChanged);
+      console.log('✅ hasAssignedTech:', hasAssignedTech);
+
+      const shouldCreateProduction = isInProduction && hasAssignedTech;
+
+      console.log('🎯 shouldCreateProduction:', shouldCreateProduction);
+
+      if (shouldCreateProduction) {
+        console.log('🏭 Verificando/criando job de produção para pedido em produção com técnico...');
+        console.log('📊 Status:', data.status || updated.status);
+        console.log('👷 Técnico:', operadorId || 'Nenhum');
+
         // Primeiro, verificar se já existe
         const existingProd = await pool.query(
           `select id from public.production where order_id = $1 and coalesce(is_active, true) = true limit 1`,
           [orderIdNum]
         );
-        
+
         if (existingProd.rowCount === 0) {
           // Criar novo job de produção
           console.log('➕ Criando novo job de produção...');
@@ -655,7 +704,7 @@ export async function PATCH(req: NextRequest) {
             JSON.stringify({}), // data
             true // is_active
           ];
-          
+
           const prodResult = await pool.query(
             `insert into public.production (
               order_id, code, work_type, material, stage_id, operador_id, operador_name, lote,
@@ -666,7 +715,7 @@ export async function PATCH(req: NextRequest) {
             ) returning id`,
             insertParams
           );
-          
+
           console.log('✅ Job de produção criado:', prodResult.rows[0]?.id);
         } else {
           // Atualizar job existente

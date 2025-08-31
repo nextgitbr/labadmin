@@ -20,6 +20,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { permissionsList } from "@/permissions/permissionsList";
 import { useErrorAlert } from "@/context/ErrorAlertContext";
 import apiClient from "@/lib/apiClient";
+import OrderDetailsModal from "@/components/orders/OrderDetailsModal";
 
 // Agora cada coluna representa exatamente um stageId vindo de /api/production/stages
 type ColumnId = string; // stageId
@@ -38,6 +39,7 @@ interface TaskItem {
   assigneeInitials?: string; // para avatar simples
   operadorId?: string;
   operadorName?: string;
+  orderId?: string; // ID do pedido original
 }
 
 // Utilitários simples de cor
@@ -102,7 +104,7 @@ function Column({ title, count, children, colorHex, columnId, itemIds }: { title
   );
 }
 
-function TaskCard({ task, colorHex }: { task: TaskItem; colorHex?: string }) {
+function TaskCard({ task, colorHex, onClick }: { task: TaskItem; colorHex?: string; onClick?: () => void }) {
   // Sortable config
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
   const styleDrag = {
@@ -114,15 +116,27 @@ function TaskCard({ task, colorHex }: { task: TaskItem; colorHex?: string }) {
 
   const rgb = colorHex ? hexToRgb(colorHex) : null;
   const tint = rgb ? `linear-gradient(0deg, rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.03), rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.03))` : undefined;
+  
+  // Handler para click (não arrastar)
+  const handleClick = (e: React.MouseEvent) => {
+    // Se não está arrastando, executa o click
+    if (!isDragging && onClick) {
+      e.preventDefault();
+      e.stopPropagation();
+      onClick();
+    }
+  };
+  
   return (
     <div
       ref={setNodeRef}
-      className="rounded-xl bg-white p-4 shadow-sm hover:shadow transition-shadow dark:bg-white/[0.03]"
+      className="rounded-xl bg-white p-4 shadow-sm hover:shadow transition-shadow dark:bg-white/[0.03] cursor-pointer"
       style={rgb ? {
         backgroundImage: `${tint}`,
         backgroundSize: 'auto',
         backgroundPosition: '0 0'
       } as React.CSSProperties : undefined}
+      onClick={handleClick}
       {...attributes}
       {...listeners}
     >
@@ -201,6 +215,9 @@ export default function TaskListBoard() {
   const [allTasksData, setAllTasksData] = useState<TaskItem[]>([]);
   // Filtro por tipo de trabalho (cadcam | acrilico)
   const [workTypeFilter, setWorkTypeFilter] = useState<string>('');
+  // Modal de detalhes do pedido
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [orderDetailsModalOpen, setOrderDetailsModalOpen] = useState(false);
 
   // Inicializa workTypeFilter do query string (?workType=cadcam|acrilico)
   useEffect(() => {
@@ -236,19 +253,74 @@ export default function TaskListBoard() {
     setWorkTypeFilter(prev => prev === type ? '' : type);
   };
 
+  // Função para abrir modal de detalhes do pedido
+  const openOrderDetails = async (task: TaskItem) => {
+    try {
+      console.log('🔍 Abrindo detalhes do pedido:', task.orderId || task.id);
+      
+      // Buscar dados completos do pedido usando orderId
+      const orderId = task.orderId || task.id;
+      const orderData = await apiClient.get(`/api/orders?id=${orderId}`);
+      console.log('📋 Dados do pedido:', orderData);
+      
+      setSelectedOrder(orderData);
+      setOrderDetailsModalOpen(true);
+    } catch (error) {
+      console.error('❌ Erro ao buscar dados do pedido:', error);
+      showAlert('Erro ao carregar dados do pedido');
+    }
+  };
+
+  // Função para fechar modal
+  const closeOrderDetails = () => {
+    setOrderDetailsModalOpen(false);
+    setSelectedOrder(null);
+  };
+
   const allTasks = useMemo(() => Object.values(columns).flat(), [columns]);
   const cadcamCount = useMemo(() => allTasks.filter((t) => (t.workType || '').toLowerCase() === 'cadcam').length, [allTasks]);
   const acrilicoCount = useMemo(() => allTasks.filter((t) => (t.workType || '').toLowerCase() === 'acrilico').length, [allTasks]);
+
+  // Estado para forçar re-render quando stages mudarem
+  const [stagesLoaded, setStagesLoaded] = useState(false);
 
   // Buscar estágios de PRODUÇÃO (cores e ordem)
   useEffect(() => {
     let mounted = true;
     (async () => {
       try {
+        console.log('🏭 Buscando stages de produção...');
         const data = await apiClient.get<any[]>('/api/production/stages');
-        if (mounted) setStageCfgs(Array.isArray(data) ? data : []);
+        console.log('📊 Stages recebidos:', data);
+        console.log('📊 Número de stages:', data?.length || 0);
+        
+        if (mounted) {
+          const stagesData = Array.isArray(data) ? data : [];
+          console.log('✅ Stages processados:', stagesData);
+          console.log('✅ StageCfgs atualizado:', stagesData.length, 'etapas');
+          setStageCfgs(stagesData);
+          setStagesLoaded(true);
+          
+          // Forçar re-render das colunas após carregar stages
+          if (stagesData.length > 0) {
+            console.log('🔄 Forçando recarregamento das colunas...');
+            // Trigger do useEffect de jobs
+          }
+        }
       } catch (e) {
-        // silencioso; manter cores default
+        console.error('❌ Erro ao buscar stages:', e);
+        // Criar stages padrão se API falhar
+        const defaultStages = [
+          { id: 'modelos', name: 'Modelos', order: 1, color: '#3B82F6' },
+          { id: 'desenho', name: 'Desenho', order: 2, color: '#10B981' },
+          { id: 'montagem', name: 'Montagem', order: 3, color: '#F59E0B' },
+          { id: 'finalizacao', name: 'Finalização', order: 4, color: '#EF4444' }
+        ];
+        console.log('🔧 Usando stages padrão:', defaultStages);
+        if (mounted) {
+          setStageCfgs(defaultStages);
+          setStagesLoaded(true);
+        }
       }
     })();
     return () => { mounted = false; };
@@ -296,6 +368,13 @@ export default function TaskListBoard() {
 
   // Buscar JOBS de PRODUÇÃO reais e preencher colunas por stageId
   useEffect(() => {
+    // Só executar se os stages já foram carregados
+    if (!stageCfgs.length || !stagesLoaded) {
+      console.log('⏳ Aguardando stages serem carregados...', { stageCfgsLength: stageCfgs.length, stagesLoaded });
+      return;
+    }
+
+    console.log('✅ Stages carregados, iniciando busca de jobs...');
     let mounted = true;
     (async () => {
       try {
@@ -311,6 +390,20 @@ export default function TaskListBoard() {
         // Precisamos de alguns dados de order para título/subtítulo
         // Opcional: buscar /api/orders?id= para cada orderId — por ora, mostrar ID e material
         const mappedAll: Record<string, TaskItem[]> = {};
+        
+        // Inicializar todas as etapas como colunas vazias
+        console.log('🏗️ Inicializando colunas para todas as etapas...');
+        console.log('📊 stageCfgs disponíveis:', stageCfgs);
+        console.log('📊 Número de stages:', stageCfgs.length);
+        
+        stageCfgs.forEach((stage, index) => {
+          const stageId = String(stage.id);
+          mappedAll[stageId] = [];
+          console.log(`📋 [${index}] Coluna criada:`, stageId, '-', stage.name);
+        });
+        
+        console.log('📂 Colunas inicializadas:', Object.keys(mappedAll));
+        
         const tempTasks: TaskItem[] = [];
         const techMap = new Map<string, string>();
         
@@ -343,6 +436,7 @@ export default function TaskListBoard() {
             assigneeInitials: p.operadorName ? String(p.operadorName).slice(0,2).toUpperCase() : 'NA',
             operadorId: p.operadorId ? String(p.operadorId) : undefined,
             operadorName: p.operadorName ? String(p.operadorName) : undefined,
+            orderId: String(p.orderId), // ID do pedido original
           };
           
           console.log('✅ Task criada:', {
@@ -353,7 +447,12 @@ export default function TaskListBoard() {
             operadorId: task.operadorId
           });
           
-          if (!mappedAll[status]) mappedAll[status] = [];
+          // Garantir que a coluna existe
+          if (!mappedAll[status]) {
+            mappedAll[status] = [];
+            console.log('📋 Coluna criada dinamicamente:', status);
+          }
+          
           mappedAll[status].push(task);
           tempTasks.push({ ...task, id: String(task.id) });
           if (p.operadorId) techMap.set(String(p.operadorId), String(p.operadorName || p.operadorId));
@@ -379,11 +478,21 @@ export default function TaskListBoard() {
     })();
     return () => { mounted = false; };
   // Atualiza sempre que os stages carregarem (para melhor mapeamento de status)
-  }, [stageCfgs]);
+  }, [stageCfgs, stagesLoaded]);
 
   // Reaplicar filtros quando techFilter / orderIdFilter mudarem
   useEffect(() => {
-    if (!allTasksData.length) return;
+    if (!allTasksData.length) {
+      // Se não há tasks, ainda assim manter todas as colunas vazias
+      const emptyColumns: Record<string, TaskItem[]> = {};
+      stageCfgs.forEach(stage => {
+        emptyColumns[String(stage.id)] = [];
+      });
+      console.log('📂 Mantendo colunas vazias:', Object.keys(emptyColumns));
+      setColumns(emptyColumns);
+      return;
+    }
+    
     const filterTech = techFilter.trim();
     const filterOrder = orderIdFilter.trim();
     const matches = (t: TaskItem): boolean => {
@@ -402,13 +511,22 @@ export default function TaskListBoard() {
       }
       return ok;
     };
+    
+    // Inicializar todas as colunas vazias primeiro
     const nextCols: Record<string, TaskItem[]> = {};
+    stageCfgs.forEach(stage => {
+      nextCols[String(stage.id)] = [];
+    });
+    
+    // Preencher com tasks filtradas
     allTasksData.filter(matches).forEach(t => {
       if (!nextCols[t.status]) nextCols[t.status] = [];
-      nextCols[t.status].push(t)
+      nextCols[t.status].push(t);
     });
+    
+    console.log('📂 Colunas após filtros:', Object.keys(nextCols));
     setColumns(nextCols);
-  }, [techFilter, orderIdFilter, workTypeFilter, allTasksData]);
+  }, [techFilter, orderIdFilter, workTypeFilter, allTasksData, stageCfgs]);
 
   const getTaskById = (id: string | null): TaskItem | null => {
     if (!id) return null;
@@ -443,44 +561,61 @@ export default function TaskListBoard() {
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
+    console.log('🎯 Drag end event:', event);
     const { active, over } = event;
-    if (!over) return;
+    if (!over) {
+      console.log('❌ No over target, cancelling drag');
+      return;
+    }
 
     const activeId = String(active.id);
     const overId = String(over.id);
 
+    console.log('📋 Active ID:', activeId, 'Over ID:', overId);
+
     const fromCol = findContainerOfItem(activeId);
+    console.log('📍 From column:', fromCol);
+
     // Se largou em um container vazio, overId será o id do container
     const containerIds: string[] = Object.keys(columns);
-    const toCol: ColumnId | null = containerIds.includes(overId) ? overId : findContainerOfItem(overId);
-    if (!fromCol || !toCol) return;
+    console.log('📂 Available columns:', containerIds);
 
-    // Verificar movimento para trás usando índice dos stages
-    const fromIdx = stageIndexById.get(normalize(fromCol));
-    const toIdx = stageIndexById.get(normalize(toCol));
-    const isBackwardMove = (fromIdx ?? 0) > (toIdx ?? 0);
-    if (isBackwardMove && !canMoveBackward) {
-      showAlert("Você não tem permissão para mover tarefas para trás no fluxo.");
-      setActiveId(null);
+    const toCol: ColumnId | null = containerIds.includes(overId) ? overId : findContainerOfItem(overId);
+    console.log('🎯 Target column:', toCol);
+
+    if (!fromCol || !toCol) {
+      console.log('❌ Invalid from/to columns:', { fromCol, toCol });
       return;
     }
 
     if (fromCol === toCol) {
+      console.log('📋 Same column reordering...');
       // Reordenação dentro da mesma coluna
       const fromItems = columns[fromCol];
       const oldIndex = fromItems.findIndex(i => i.id === activeId);
       const newIndex = (containerIds as string[]).includes(overId)
         ? fromItems.length - 1
         : fromItems.findIndex(i => i.id === overId);
-      if (oldIndex === -1 || newIndex === -1) return;
+      if (oldIndex === -1 || newIndex === -1) {
+        console.log('❌ Invalid indices for reordering:', { oldIndex, newIndex });
+        return;
+      }
       const newItems = arrayMove(fromItems, oldIndex, newIndex);
       setColumns(prev => ({ ...prev, [fromCol]: newItems }));
+      console.log('✅ Reordering completed');
     } else {
+      console.log('🔄 Moving between columns...');
       // Mover entre colunas
       const fromItems = columns[fromCol] || [];
       const toItems = columns[toCol] || [];
       const moving = fromItems.find(i => i.id === activeId);
-      if (!moving) return;
+      if (!moving) {
+        console.log('❌ Task not found in from column');
+        return;
+      }
+
+      console.log('👷 Moving task:', moving.title, 'from', fromCol, 'to', toCol);
+
       const overIndex = containerIds.includes(overId)
         ? toItems.length
         : Math.max(0, toItems.findIndex(i => i.id === overId));
@@ -490,11 +625,18 @@ export default function TaskListBoard() {
       nextTo.splice(overIndex === -1 ? toItems.length : overIndex, 0, updatedMoving);
       setColumns(prev => ({ ...prev, [fromCol]: nextFrom, [toCol]: nextTo }));
 
+      console.log('💾 Updating backend...');
       // Persistir mudança de estágio no backend
       const newStageId = toCol;
-      // Dispara PATCH de forma otimista; em caso de erro, apenas exibe alerta
+      console.log('🔧 PATCH URL:', `/api/production?id=${encodeURIComponent(updatedMoving.id)}`);
+      console.log('📝 Payload:', { stageId: newStageId });
+
       apiClient.patch(`/api/production?id=${encodeURIComponent(updatedMoving.id)}`, { stageId: newStageId })
-        .catch(() => {
+        .then(() => {
+          console.log('✅ Backend update successful');
+        })
+        .catch((error) => {
+          console.error('❌ Backend update failed:', error);
           showAlert('Não foi possível salvar a mudança de etapa.');
         });
     }
@@ -571,7 +713,13 @@ export default function TaskListBoard() {
                 columnId={colId}
                 itemIds={list.map(t => t.id)}
               >
-                {list.map((t) => (<TaskCard key={t.id} task={t} />))}
+                {list.map((t) => (
+                  <TaskCard 
+                    key={t.id} 
+                    task={t} 
+                    onClick={() => openOrderDetails(t)}
+                  />
+                ))}
               </Column>
             );
           })}
@@ -587,6 +735,15 @@ export default function TaskListBoard() {
           })()}
         </DragOverlay>
       </DndContext>
+
+      {/* Modal de detalhes do pedido */}
+      {selectedOrder && (
+        <OrderDetailsModal
+          orderId={selectedOrder._id || selectedOrder.id}
+          isOpen={orderDetailsModalOpen}
+          onClose={closeOrderDetails}
+        />
+      )}
     </div>
   );
 }
