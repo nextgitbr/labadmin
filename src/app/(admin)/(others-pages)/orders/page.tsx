@@ -267,7 +267,8 @@ export default function Pedidos() {
                         <button 
                           title="Excluir" 
                           aria-label="Excluir item"
-                          onClick={() => handleDeleteOrder(order._id, order.orderNumber)}
+                          type="button"
+                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteOrder(order._id, order.orderNumber); }}
                           className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200 group"
                         >
                           <svg 
