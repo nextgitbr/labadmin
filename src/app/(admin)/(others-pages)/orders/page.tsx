@@ -139,6 +139,24 @@ export default function Pedidos() {
     }
   };
 
+  // Função para excluir pedido com confirmação
+  const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
+    const confirmDelete = window.confirm(
+      `Tem certeza que deseja excluir o pedido #${orderNumber}?\n\nEsta ação não pode ser desfeita.`
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await apiClient.delete(`/api/orders?id=${orderId}`);
+      // Recarregar a lista após exclusão
+      await fetchOrders();
+    } catch (error) {
+      console.error('Erro ao excluir pedido:', error);
+      alert('Erro ao excluir o pedido. Tente novamente.');
+    }
+  };
+
   // Função para formatar data
   const formatDate = (dateString: string | Date) => {
     const date = new Date(dateString);
@@ -246,17 +264,25 @@ export default function Pedidos() {
                         {order.estimatedDelivery ? formatDate(order.estimatedDelivery) : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap flex gap-2">
-                        <button title="Visualizar" aria-label="Visualizar item">
-                          <EyeIcon className="w-5 h-5 opacity-90 hover:opacity-100" color={typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? '#60a5fa' : '#3B82F6'} />
-                        </button>
-                        <button title="Editar" aria-label="Editar item">
-                          <PencilIcon className="w-5 h-5 opacity-90 hover:opacity-100" color={typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? '#fde68a' : '#F59E0B'} />
-                        </button>
-                        <button title="Imprimir" aria-label="Imprimir item">
-                          <PrintIcon className="w-5 h-5 opacity-90 hover:opacity-100" color={typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? '#6ee7b7' : '#10B981'} />
-                        </button>
-                        <button title="Excluir" aria-label="Excluir item">
-                          <TrashIcon className="w-5 h-5 opacity-90 hover:opacity-100" color={typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches ? '#fca5a5' : '#EF4444'} />
+                        <button 
+                          title="Excluir" 
+                          aria-label="Excluir item"
+                          onClick={() => handleDeleteOrder(order._id, order.orderNumber)}
+                          className="p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200 group"
+                        >
+                          <svg 
+                            className="w-5 h-5 text-red-400 group-hover:text-red-600 dark:text-red-500 dark:group-hover:text-red-400 transition-colors duration-200" 
+                            fill="none" 
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor"
+                          >
+                            <path 
+                              strokeLinecap="round" 
+                              strokeLinejoin="round" 
+                              strokeWidth={2} 
+                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                            />
+                          </svg>
                         </button>
                       </td>
                     </tr>
