@@ -5,27 +5,27 @@ import { useRouter } from "next/navigation";
 export default function SessionTimeoutModal({ open }: { open: boolean }) {
   const router = useRouter();
 
-  console.log('SessionTimeoutModal: open =', open);
+  if (process.env.NODE_ENV !== 'production') console.log('SessionTimeoutModal: open =', open);
 
   const handleRedirectToLogin = () => {
-    console.log('SessionTimeoutModal: Redirecionando para login');
+    if (process.env.NODE_ENV !== 'production') console.log('SessionTimeoutModal: Redirecionando para login');
     router.replace("/signin");
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     // Se clicou no backdrop (fora do modal), redireciona para login
     if (e.target === e.currentTarget) {
-      console.log('SessionTimeoutModal: Clique no backdrop detectado');
+      if (process.env.NODE_ENV !== 'production') console.log('SessionTimeoutModal: Clique no backdrop detectado');
       handleRedirectToLogin();
     }
   };
 
   if (!open) {
-    console.log('SessionTimeoutModal: Modal fechado, não renderizando');
+    if (process.env.NODE_ENV !== 'production') console.log('SessionTimeoutModal: Modal fechado, não renderizando');
     return null;
   }
 
-  console.log('SessionTimeoutModal: Renderizando modal');
+  if (process.env.NODE_ENV !== 'production') console.log('SessionTimeoutModal: Renderizando modal');
   
   return (
     <div 

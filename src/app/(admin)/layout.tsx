@@ -44,7 +44,7 @@ export default function AdminLayout({
   // Modal de sessão expirada
   function SessionTimeoutHandler() {
     const { isIdle } = useSessionTimeout();
-    console.log('AdminLayout SessionTimeoutHandler: isIdle =', isIdle);
+    if (process.env.NODE_ENV !== 'production') console.log('AdminLayout SessionTimeoutHandler: isIdle =', isIdle);
     return <SessionTimeoutModal open={isIdle} />;
   }
 

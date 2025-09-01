@@ -34,13 +34,13 @@ export function SessionTimeoutProvider({ children, timeoutMinutes = DEFAULT_TIME
 
   // Timer countdown
   useEffect(() => {
-    console.log('SessionTimeout: Iniciando timer com', timeoutMinutes, 'minutos');
+    if (process.env.NODE_ENV !== 'production') console.log('SessionTimeout: Iniciando timer com', timeoutMinutes, 'minutos');
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setRemaining((prev) => {
-        console.log('SessionTimeout: Remaining seconds:', prev);
+        if (process.env.NODE_ENV !== 'production') console.log('SessionTimeout: Remaining seconds:', prev);
         if (prev <= 1) {
-          console.log('SessionTimeout: Sessão expirada! Definindo isIdle = true');
+          if (process.env.NODE_ENV !== 'production') console.log('SessionTimeout: Sessão expirada! Definindo isIdle = true');
           setIsIdle(true);
           return 0;
         }
@@ -54,9 +54,9 @@ export function SessionTimeoutProvider({ children, timeoutMinutes = DEFAULT_TIME
 
   // Quando ficar idle, apenas marca como inativo (modal será controlado externamente)
   useEffect(() => {
-    console.log('SessionTimeout: isIdle mudou para:', isIdle);
+    if (process.env.NODE_ENV !== 'production') console.log('SessionTimeout: isIdle mudou para:', isIdle);
     if (isIdle && onLogout) {
-      console.log('SessionTimeout: Executando logout automático');
+      if (process.env.NODE_ENV !== 'production') console.log('SessionTimeout: Executando logout automático');
       // Executa logout automático imediatamente (limpeza de dados)
       onLogout();
     }

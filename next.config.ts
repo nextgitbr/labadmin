@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  compiler: {
+    // Remove console.* in production builds, keeping error/warn
+    removeConsole: { exclude: ["error", "warn"] },
+  },
   eslint: {
     // Permite que o build prossiga mesmo com erros de ESLint (necessário para deploy de teste)
     ignoreDuringBuilds: true,
