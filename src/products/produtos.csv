@@ -1,0 +1,100 @@
+Código,Nome,Preço Base,Código de categoria,Categoria,Tipo,descicao,IVA
+1,Attachment simples Bredent,"42,00 €",BAR,Barras e Attachements,CAD,Barras e Attachements,6
+2,Barra fresada com matriz Bredent com 2 implantes,"42,00 €",BAR,Barras e Attachements,CAD,Barras e Attachements,6
+3,Barra fresada com matriz Bredent e attachments distais 2 implantes,"42,00 €",BAR,Barras e Attachements,CAD,Barras e Attachements,6
+4,Barra fresada com matriz Bredent e attachments distais 3 implantes,"42,00 €",BAR,Barras e Attachements,CAD,Barras e Attachements,6
+5,Caixa metálica para attachment simples Bredent,"42,00 €",BAR,Barras e Attachements,CAD,Barras e Attachements,6
+6,Colocação de elemento retentivo (fornecido pelo cliente),"42,00 €",BAR,Barras e Attachements,CAD,Barras e Attachements,6
+7,Microfresado de estrutura por elemento,"42,00 €",BAR,Barras e Attachements,CAD,Barras e Attachements,6
+8,Prótese esquelética de precisão sobre barra com dentes Artegral Life (Merz),"42,00 €",BAR,Barras e Attachements,CAD,Barras e Attachements,6
+9,Trocar elemento de retenção attachment simples Bredent,"42,00 €",BAR,Barras e Attachements,CAD,Barras e Attachements,6
+10,Captura até 2 implantes,"100,00 €",CAP,Captura,ACR,Captura,23
+11,Captura mais de 2 implantes,"150,00 €",CAP,Captura,ACR,Captura,23
+12,Carga Imediata dentes Artegral Life (Merz),"360,00 €",CIM,Carga Imediata,ACR,Carga Imediata,6
+13,Carga Imediata FP1 dentes Artegral Life (Merz),"430,00 €",CIM,Carga Imediata,ACR,Carga Imediata,6
+14,Elemento anterior dissilicato de lítio / feldespática fresado,"150,00 €",CER,Cerâmica,CAD,Cerâmica,6
+15,Elemento posterior dissilicato de lítio / feldespática fresado,"150,00 €",CER,Cerâmica,CAD,Cerâmica,6
+16,Cera de articulação com placa base estabilizadora,"14,00 €",CEM,Ceras e Moldeiras,ACR,Ceras e Moldeiras,23
+17,Cera de articulação sup. ou inf. (unidade),"9,00 €",CEM,Ceras e Moldeiras,ACR,Ceras e Moldeiras,23
+18,Moldeira individual,"15,00 €",CEM,Ceras e Moldeiras,ACR,Ceras e Moldeiras,23
+19,Analogo Digital,"35,00 €",COM,Componentes,MAT,Componentes,23
+20,Analogo Gesso,"35,00 €",COM,Componentes,MAT,Componentes,23
+21,Borracha Lockator Kit,"45,00 €",COM,Componentes,MAT,Componentes,6
+22,Interface Digital,"70,00 €",COM,Componentes,MAT,Componentes,6
+23,Parafuso,"18,00 €",COM,Componentes,MAT,Componentes,6
+24,Pilar de Cicatrização,"35,00 €",COM,Componentes,MAT,Componentes,6
+25,Pilar Loccator,"155,00 €",COM,Componentes,MAT,Componentes,6
+26,Pilar Multi-Unit Angulado,"160,00 €",COM,Componentes,MAT,Componentes,6
+27,Pilar Multi-Unit Reto,"125,00 €",COM,Componentes,MAT,Componentes,6
+28,Pilar Provisório,"65,00 €",COM,Componentes,MAT,Componentes,6
+29,Transfer Multi-Unit,"40,00 €",COM,Componentes,MAT,Componentes,6
+30,Acrescentar 1 dente Artegral Life (Merz) por grupo anterior ou posterior,"45,00 €",CON,Consertos e Acréscimos,ACR,Consertos e Acréscimos,6
+31,Acrescentar 1 dente em prótese,"26,00 €",CON,Consertos e Acréscimos,ACR,Consertos e Acréscimos,6
+32,Acrescentar 1 dente Phonares (Ivoclar) por grupo anterior ou posterior,"66,00 €",CON,Consertos e Acréscimos,ACR,Consertos e Acréscimos,6
+33,Acrescentar gancho em prótese,"21,00 €",CON,Consertos e Acréscimos,ACR,Consertos e Acréscimos,6
+34,Conserto de prótese acrílica,"21,00 €",CON,Consertos e Acréscimos,ACR,Consertos e Acréscimos,6
+35,Por cada dente mais,"9,00 €",CON,Consertos e Acréscimos,ACR,Consertos e Acréscimos,6
+36,Por cada dente mais por grupo anterior ou posterior Artegral Life (Merz),"9,00 €",CON,Consertos e Acréscimos,ACR,Consertos e Acréscimos,6
+37,Por cada dente mais por grupo anterior ou posterior Phonares (Ivoclar),"9,00 €",CON,Consertos e Acréscimos,ACR,Consertos e Acréscimos,6
+38,Por cada gancho mais,"9,00 €",CON,Consertos e Acréscimos,ACR,Consertos e Acréscimos,6
+39,Angulação em metal ou zircónio,"20,00 €",DIV,Diversos,ACR,Diversos,6
+40,Apoio metálico,"18,00 €",DIV,Diversos,ACR,Diversos,6
+41,Chave em silicone,"10,00 €",DIV,Diversos,ACR,Diversos,23
+42,Elemento compósito puro,"88,00 €",DIV,Diversos,ACR,Diversos,6
+43,Enceramento de Diagnóstico por Elemento,"15,00 €",DIV,Diversos,ACR,Diversos,23
+44,Falso coto direto,"36,00 €",DIV,Diversos,ACR,Diversos,6
+45,Falso coto em chave fundido,"57,00 €",DIV,Diversos,ACR,Diversos,6
+46,Falso coto fundido,"42,00 €",DIV,Diversos,ACR,Diversos,6
+47,Fresado Pre-Mill,"25,00 €",DIV,Diversos,ACR,Diversos,6
+48,Montagem de diagnóstico por maxilar,"75,00 €",DIV,Diversos,ACR,Diversos,23
+49,Opacar falso coto,"15,00 €",DIV,Diversos,ACR,Diversos,6
+50,Pilar Personalizado Metal,"70,00 €",DIV,Diversos,ACR,Diversos,6
+51,Ponte Maryland metal-compósito,"134,00 €",DIV,Diversos,ACR,Diversos,6
+52,Prova de maquete por elemento,"13,00 €",DIV,Diversos,ACR,Diversos,23
+53,Prova de passividade em acrílico por maxilar,"30,00 €",DIV,Diversos,ACR,Diversos,23
+54,Prova de passividade em alumínio por implante,"30,00 €",DIV,Diversos,ACR,Diversos,23
+55,Provisório por Elemento,"27,00 €",DIV,Diversos,ACR,Diversos,6
+56,Goteira branqueamento / aparelho termoplástico,"27,00 €",GOT,Goteira,ACR,Goteira,23
+57,Goteira oclusal em borracha termoplástica,"27,00 €",GOT,Goteira,ACR,Goteira,23
+58,Goteira oclusal fresada PMMA ,"135,00 €",GOT,Goteira,CAD,Goteira,6
+59,Elemento sobre dente natural,"134,00 €",MCE,Metal-Cerâmica,CAD,Metal-Cerâmica,6
+60,Elemento sobre implante,"134,00 €",MCE,Metal-Cerâmica,CAD,Metal-Cerâmica,6
+61,Fresagem conexão implante,"27,00 €",MCE,Metal-Cerâmica,CAD,Metal-Cerâmica,6
+62,Ponte Maryland,"134,00 €",MCE,Metal-Cerâmica,CAD,Metal-Cerâmica,6
+63,Duplicado de modelo,"9,00 €",MOD,Modelo,ACR,Modelo,23
+64,Modelo de apresentação,"15,00 €",MOD,Modelo,ACR,Modelo,23
+65,Modelo de estudo,"3,00 €",MOD,Modelo,ACR,Modelo,23
+66,Modelo impresso digital,"21,00 €",MOD,Modelo,ACR,Modelo,23
+67,Modelo impresso digital bimaxilar,"32,00 €",MOD,Modelo,ACR,Modelo,23
+68,Guia cirúrgica em acrílico ou PMMA,"30,00 €",PRE,Preparação,ACR,Preparação,23
+69,Moldeira individual,"15,00 €",PRE,Preparação,ACR,Preparação,23
+70,Preparação para carga imediata dentes Artegral Life (Merz),"220,00 €",PRE,Preparação,ACR,Preparação,23
+71,Apoio em arame,"25,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+72,Barra metálica pré-fabricada,"29,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+73,Dentes Phonares (Ivoclar) por grupo anterior ou posterior,"66,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+74,Duplicado de prótese em acrílico,"20,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+75,Gancho bola,"20,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+76,Gancho circular simples,"65,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+77,Gancho em acetal,"10,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+78,Limpeza de prótese,"20,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+79,Por cada gancho em acetal a mais,"30,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+80,Prótese Artegral Life (Merz) por grupo anterior ou posterior,"45,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+81,Rebasamento com acrílico,"45,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+82,Rede metálica pré-fabricada,"75,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+83,Rede metálica pré-fabricada,"38,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+84,Reforço em arame,"37,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+85,Remontagem de Prótese Híbrida,"205,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+86,Tratamento térmico de acrílico antialérgico,"20,00 €",ACR,Prótese Acrílica,ACR,Prótese Acrílica,6
+87,Implante Adicional,"42,00 €",HIB,Prótese Híbrida,ACR,Prótese Híbrida,6
+88,Implante Adicional,"12,00 €",HIB,Prótese Híbrida,ACR,Prótese Híbrida,6
+89,Prótese hibrida FP1,"70,00 €",HIB,Prótese Híbrida,ACR,Prótese Híbrida,6
+90,Prótese hibrida Ti fresada direta a 4 implantes com dentes Artegral Life (Merz),"900,00 €",HIB,Prótese Híbrida,ACR,Prótese Híbrida,6
+91,Prótese hibrida Ti fresada e colada a 4 interfaces com dentes Artegral Life (Merz),"840,00 €",HIB,Prótese Híbrida,ACR,Prótese Híbrida,6
+92,Recuperação DVO em acrílico,"120,00 €",HIB,Prótese Híbrida,ACR,Prótese Híbrida,6
+93,Remontagem de prótese hibrida com dentes Artegral Life (Merz),"410,00 €",HIB,Prótese Híbrida,ACR,Prótese Híbrida,6
+94,Cimentação da interface ou pilar por implante,"12,00 €",ZIR,Zircónio,CAD,Zircónio,6
+95,Elemento sobre dente natural,"134,00 €",ZIR,Zircónio,CAD,Zircónio,6
+96,Elemento sobre implante,"134,00 €",ZIR,Zircónio,CAD,Zircónio,6
+97,Gengiva em cerâmica por elemento,"15,00 €",ZIR,Zircónio,CAD,Zircónio,6
+98,Pilar Personalizado Zircónio,"70,00 €",ZIR,Zircónio,CAD,Zircónio,6
+99,Ponte Maryland,"134,00 €",ZIR,Zircónio,CAD,Zircónio,6
