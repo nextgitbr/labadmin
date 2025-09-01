@@ -216,12 +216,12 @@ const Calendar: React.FC<CalendarProps> = ({ events: eventsProp }) => {
 
   const renderEventContent = (eventInfo: EventContentArg) => {
     const status = eventInfo.event.extendedProps.status as string | undefined;
-    // Tenta encontrar a etapa pelo nome do status para herdar as mesmas cores do Kanban
-    const stage = status ? stages.find((s) => s.name === status) : null;
+    // Tenta encontrar a etapa por id OU por nome para herdar as mesmas cores do Kanban
+    const stage = status ? stages.find((s) => s.id === status || s.name === status) : null;
     const primary = stage ? (stage.primaryColor || stage.color) : '#3B82F6';
     const stroke = stage ? (stage.stroke || darken(primary, 0.25)) : darken('#3B82F6', 0.25);
     const cardBgBase = stage ? (stage.cardBgColor || primary) : primary;
-    // Mesma lógica do Kanban: 
+    // Mesma lógica do Kanban:
     // - Light: card em tom claro derivado da cor do estágio
     // - Dark: usa cardBgColor (ou lighten do primary) com borda do stroke
     const bg = isDark ? (stage ? (stage.cardBgColor || lighten(primary, 0.88)) : darken(primary, 0.1)) : lighten(cardBgBase, 0.90);
@@ -245,7 +245,7 @@ const Calendar: React.FC<CalendarProps> = ({ events: eventsProp }) => {
           )}
           {status && (
             <div className="text-[10px] leading-3 opacity-80 truncate w-full">
-              {status}
+              {stage?.name ?? status}
             </div>
           )}
         </div>
@@ -329,7 +329,7 @@ const Calendar: React.FC<CalendarProps> = ({ events: eventsProp }) => {
                             <span
                               className={`h-2 w-2 rounded-full bg-white ${
                                 eventLevel === key ? "block" : "hidden"
-                              }`}  
+                              }`}
                             ></span>
                           </span>
                         </span>
@@ -389,38 +389,6 @@ const Calendar: React.FC<CalendarProps> = ({ events: eventsProp }) => {
           </div>
         </div>
       </Modal>
-    </div>
-  );
-};
-
-const statusColors: Record<string, string> = {
-  "Criado": "bg-blue-500",
-  "Iniciado": "bg-cyan-500",
-  "Em processamento": "bg-yellow-500",
-  "Aguardando": "bg-orange-500",
-  "Finalizado": "bg-green-600",
-  "Cancelado": "bg-red-500"
-};
-
-const renderEventContent = (eventInfo: EventContentArg) => {
-  const status = eventInfo.event.extendedProps.status;
-  const orderNumber = eventInfo.event.extendedProps.orderNumber;
-  const patientName = eventInfo.event.extendedProps.patientName;
-  const assignedTo = eventInfo.event.extendedProps.assignedTo;
-  
-  return (
-    <div className="flex flex-col items-start justify-center w-full p-1 text-white">
-      <div className="font-semibold text-xs truncate w-full">
-        {orderNumber || eventInfo.event.title}
-      </div>
-      {patientName && (
-        <div className="text-xs opacity-90 truncate w-full">
-          {patientName}
-        </div>
-      )}
-      <div className="text-xs opacity-75 truncate w-full">
-        {status}
-      </div>
     </div>
   );
 };
