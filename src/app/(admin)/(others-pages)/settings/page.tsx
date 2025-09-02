@@ -7,6 +7,7 @@ import InputField from "@/components/form/input/InputField";
 import Button from "@/components/ui/button/Button";
 import TextArea from "@/components/form/input/TextArea";
 import Tabs from "@/components/ui/Tabs";
+import Link from "next/link";
 
 import { useSessionConfig } from '@/hooks/useSessionConfig';
 import { useSessionTimeout } from '@/context/SessionTimeoutContext';
@@ -103,6 +104,29 @@ export default function SettingsPage() {
                           <span className="text-sm text-gray-500 dark:text-gray-400">01/08/2025 10:00</span>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                )
+              },
+              {
+                label: "Catálogo",
+                content: (
+                  <div className="space-y-6">
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+                      <div className="font-semibold mb-4 text-gray-800 dark:text-gray-100">Gerenciar catálogo</div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-5 bg-gray-50 dark:bg-gray-900/20">
+                          <div className="text-gray-800 dark:text-gray-100 font-medium mb-2">Produtos</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-300 mb-3">Gerencie a lista de produtos, preços e IVA.</div>
+                          <Link href="/settings/produtos" className="inline-flex items-center px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Abrir Produtos</Link>
+                        </div>
+                        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-5 bg-gray-50 dark:bg-gray-900/20">
+                          <div className="text-gray-800 dark:text-gray-100 font-medium mb-2">Categorias</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-300 mb-3">Organize categorias e tipos para o catálogo.</div>
+                          <Link href="/settings/categorias" className="inline-flex items-center px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-700 text-white">Abrir Categorias</Link>
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-3">Acesso exige permissões específicas.</div>
                     </div>
                   </div>
                 )

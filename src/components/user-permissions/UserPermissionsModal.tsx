@@ -260,6 +260,18 @@ export function UserPermissionsModal({ isOpen, onClose, user, onSave }: UserPerm
               <input type="checkbox" checked={!!(perms as any).configuracoesProducao} onChange={() => toggle('configuracoesProducao' as any)} className="h-5 w-5 text-blue-light-500 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-light-500" />
               <span className="text-sm text-gray-700 dark:text-gray-300">Configurações › Produção</span>
             </label>
+
+            {/* Configurações > Produtos */}
+            <label className="flex items-center space-x-3 pl-6">
+              <input type="checkbox" checked={!!(perms as any).configuracoesProdutos} onChange={() => toggle('configuracoesProdutos' as any)} className="h-5 w-5 text-blue-light-500 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-light-500" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Configurações › Produtos</span>
+            </label>
+
+            {/* Configurações > Categorias */}
+            <label className="flex items-center space-x-3 pl-6">
+              <input type="checkbox" checked={!!(perms as any).configuracoesCategorias} onChange={() => toggle('configuracoesCategorias' as any)} className="h-5 w-5 text-blue-light-500 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-light-500" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">Configurações › Categorias</span>
+            </label>
           </div>
         )}
 

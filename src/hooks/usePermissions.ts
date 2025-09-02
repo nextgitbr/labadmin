@@ -19,6 +19,8 @@ export type Permissions = {
   configuracoes: boolean;
   configuracoesKanban?: boolean;
   configuracoesProducao?: boolean;
+  configuracoesProdutos?: boolean;
+  configuracoesCategorias?: boolean;
   // Permite mover tarefas "para trás" no fluxo (ex.: Finalizado → Em produção)
   taskMoveBackward?: boolean;
 };
@@ -61,6 +63,8 @@ function hasAnyPermissionTrue(permissions: Permissions | null): boolean {
     permissions.configuracoes,
     Boolean(permissions.configuracoesKanban),
     Boolean((permissions as any).configuracoesProducao),
+    Boolean((permissions as any).configuracoesProdutos),
+    Boolean((permissions as any).configuracoesCategorias),
     Boolean((permissions as any).taskMoveBackward),
   ];
   // Checa granularidade de pedidos
