@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { Pool } from 'pg';
 import '@/lib/sslFix';
+import { requireAuth } from '@/lib/apiAuth';
 
 // Small CSV parser that supports quoted fields and commas within quotes
 function parseCSV(content: string): string[][] {
@@ -23,6 +24,7 @@ function parseCSV(content: string): string[][] {
       } else {
         inQuotes = !inQuotes;
       }
+
     } else if (ch === ',' && !inQuotes) {
       cur.push(field.trim());
       field = '';
@@ -150,5 +152,146 @@ export async function GET() {
         { status: 500 }
       );
     }
+  }
+}
+
+// Helper: check permission for products settings
+function ensureProductsPermission(user: any) {
+  const perms = user?.permissions || {};
+  const hasSpecific = perms.configuracoesProdutos === true;
+  const role = (user?.role || '').toLowerCase();
+  const roleAllowed = role === 'administrator' || role === 'manager';
+  if (!hasSpecific && !roleAllowed) {
+    throw Object.assign(new Error('Forbidden'), { status: 403 });
+  }
+}
+
+// Create product
+export async function POST(req: NextRequest) {
+  try {
+    try {
+      const user = await requireAuth(req);
+      ensureProductsPermission(user);
+    } catch (e: any) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: e?.status || 401 });
+    }
+
+    const body = await req.json();
+    const {
+      codigo,
+      nome,
+      tipo,
+      categoria,
+      codCategoria,
+      precoBase,
+      precoBaseNumber,
+      descricao,
+      iva,
+      categoryId,
+      isActive,
+    } = body || {};
+
+    if (!nome) return NextResponse.json({ error: 'Nome é obrigatório' }, { status: 400 });
+
+    const values: any[] = [];
+    const cols: string[] = [];
+    function add(col: string, val: any) {
+      if (val !== undefined) {
+        values.push(val);
+        cols.push(`${col}`);
+      }
+    }
+
+    add('codigo', codigo);
+    add('nome', nome);
+    add('tipo', tipo);
+    add('categoria', categoria);
+    add('cod_categoria', codCategoria);
+    add('preco_base_raw', precoBase);
+    add('preco_base', typeof precoBaseNumber === 'number' ? precoBaseNumber : (precoBaseNumber != null ? Number(precoBaseNumber) : undefined));
+    add('descricao', descricao);
+    add('iva', typeof iva === 'number' ? iva : (iva != null ? Number(iva) : undefined));
+    add('category_id', categoryId);
+    add('is_active', typeof isActive === 'boolean' ? isActive : undefined);
+
+    if (cols.length === 0) return NextResponse.json({ error: 'Nada para inserir' }, { status: 400 });
+
+    const placeholders = cols.map((_, i) => `$${i + 1}`).join(',');
+    const sql = `insert into public.products (${cols.join(',')}) values (${placeholders}) returning codigo, nome, tipo, categoria, cod_categoria as "codCategoria", preco_base as "precoBaseNumber", preco_base_raw as "precoBase", descricao, iva`;
+    const { rows } = await pool.query(sql, values);
+    return NextResponse.json(rows[0] ?? {}, { status: 201 });
+  } catch (err: any) {
+    return NextResponse.json({ error: 'Erro ao criar produto', details: String(err?.message ?? err) }, { status: err?.status || 500 });
+  }
+}
+
+// Update product by codigo (or id if exists)
+export async function PATCH(req: NextRequest) {
+  try {
+    try {
+      const user = await requireAuth(req);
+      ensureProductsPermission(user);
+    } catch (e: any) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: e?.status || 401 });
+    }
+
+    const body = await req.json();
+    const { codigo, id, ...updates } = body || {};
+    const target = id ? { by: 'id', val: id } : (codigo ? { by: 'codigo', val: codigo } : null);
+    if (!target) return NextResponse.json({ error: 'Informe id ou codigo do produto' }, { status: 400 });
+
+    const sets: string[] = [];
+    const values: any[] = [];
+    function addSet(col: string, val: any) {
+      if (val !== undefined) {
+        values.push(val);
+        sets.push(`${col}=$${values.length}`);
+      }
+    }
+
+    addSet('nome', updates.nome);
+    addSet('tipo', updates.tipo);
+    addSet('categoria', updates.categoria);
+    addSet('cod_categoria', updates.codCategoria);
+    addSet('preco_base_raw', updates.precoBase);
+    addSet('preco_base', typeof updates.precoBaseNumber === 'number' ? updates.precoBaseNumber : (updates.precoBaseNumber != null ? Number(updates.precoBaseNumber) : undefined));
+    addSet('descricao', updates.descricao);
+    addSet('iva', typeof updates.iva === 'number' ? updates.iva : (updates.iva != null ? Number(updates.iva) : undefined));
+    addSet('category_id', updates.categoryId);
+    if (typeof updates.isActive === 'boolean') addSet('is_active', updates.isActive);
+
+    if (sets.length === 0) return NextResponse.json({ error: 'Nada para atualizar' }, { status: 400 });
+
+    values.push(target.val);
+    const sql = `update public.products set ${sets.join(', ')}, updated_at=now() where ${target.by}=$${values.length} returning codigo, nome, tipo, categoria, cod_categoria as "codCategoria", preco_base as "precoBaseNumber", preco_base_raw as "precoBase", descricao, iva`;
+    const res = await pool.query(sql, values);
+    if (res.rowCount === 0) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
+    return NextResponse.json(res.rows[0]);
+  } catch (err: any) {
+    return NextResponse.json({ error: 'Erro ao atualizar produto', details: String(err?.message ?? err) }, { status: err?.status || 500 });
+  }
+}
+
+// Delete product by codigo or id
+export async function DELETE(req: NextRequest) {
+  try {
+    try {
+      const user = await requireAuth(req);
+      ensureProductsPermission(user);
+    } catch (e: any) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: e?.status || 401 });
+    }
+    const { searchParams } = new URL(req.url!);
+    const id = searchParams.get('id');
+    const codigo = searchParams.get('codigo');
+    if (!id && !codigo) return NextResponse.json({ error: 'Informe id ou codigo' }, { status: 400 });
+
+    const by = id ? 'id' : 'codigo';
+    const val = id ?? codigo!;
+    const res = await pool.query(`delete from public.products where ${by}=$1`, [val]);
+    if (res.rowCount === 0) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
+    return NextResponse.json({ message: 'Produto removido com sucesso' });
+  } catch (err: any) {
+    return NextResponse.json({ error: 'Erro ao remover produto', details: String(err?.message ?? err) }, { status: err?.status || 500 });
   }
 }
