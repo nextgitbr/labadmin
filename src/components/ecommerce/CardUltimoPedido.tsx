@@ -13,6 +13,7 @@ interface CardUltimoPedidoProps {
 }
 
 import Link from "next/link";
+import { apiClient } from "@/lib/apiClient";
 
 export default function CardUltimoPedido({ pedido }: CardUltimoPedidoProps) {
   // Buscar cores dos stages do Kanban
@@ -22,11 +23,8 @@ export default function CardUltimoPedido({ pedido }: CardUltimoPedidoProps) {
     let mounted = true;
     (async () => {
       try {
-        const res = await fetch('/api/stages');
-        if (res.ok) {
-          const data = await res.json();
-          if (mounted) setStages(Array.isArray(data) ? data : []);
-        }
+        const data = await apiClient.get<StageCfg[]>("/api/stages");
+        if (mounted) setStages(Array.isArray(data) ? data : []);
       } catch {/* silencioso */}
     })();
     return () => { mounted = false; };

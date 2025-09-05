@@ -4,6 +4,7 @@ import { addBusinessDays } from '@/utils/businessDays';
 import { requireSupabaseAdmin } from '@/lib/supabaseAdmin';
 import { requireAuth } from '@/lib/apiAuth';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // Postgres pool (Supabase/PG) com fallbacks e SSL condicional
 const PG_CONN =
@@ -235,6 +236,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(orders);
   } catch (error) {
     console.error('Erro ao buscar pedidos (PG):', error);
+    await logAppError('orders GET failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -520,6 +522,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(mapOrderRow(newRow), { status: 201 });
   } catch (error) {
     console.error('❌ Erro ao criar pedido (PG):', error);
+    await logAppError('orders POST failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ message: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -797,6 +800,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(mapOrderRow(updated));
   } catch (error) {
     console.error('❌ Erro ao atualizar pedido (PG):', error);
+    await logAppError('orders PATCH failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -823,6 +827,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true, message: 'Pedido removido com sucesso' });
   } catch (error) {
     console.error('Erro ao remover pedido (PG):', error);
+    await logAppError('orders DELETE failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

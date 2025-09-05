@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import '@/lib/sslFix';
 import { requireAuth } from '@/lib/apiAuth';
+import { logAppError } from '@/lib/logError';
 
 const PG_CONN =
   process.env.PG_URI ||
@@ -43,6 +44,7 @@ export async function POST(req: NextRequest) {
     const { rows } = await pool.query(sql, [tipo, categoria]);
     return NextResponse.json(rows[0], { status: 201 });
   } catch (e: any) {
+    await logAppError('product-categories POST failed', 'error', { message: String(e?.message ?? e) });
     return NextResponse.json({ error: 'Erro ao criar categoria', details: String(e?.message ?? e) }, { status: 500 });
   }
 }
@@ -70,6 +72,7 @@ export async function PATCH(req: NextRequest) {
     if (res.rowCount === 0) return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 });
     return NextResponse.json(res.rows[0]);
   } catch (e: any) {
+    await logAppError('product-categories PATCH failed', 'error', { message: String(e?.message ?? e) });
     return NextResponse.json({ error: 'Erro ao atualizar categoria', details: String(e?.message ?? e) }, { status: 500 });
   }
 }
@@ -95,6 +98,7 @@ export async function DELETE(req: NextRequest) {
     if (res.rowCount === 0) return NextResponse.json({ error: 'Categoria não encontrada' }, { status: 404 });
     return NextResponse.json({ message: 'Categoria removida com sucesso' });
   } catch (e: any) {
+    await logAppError('product-categories DELETE failed', 'error', { message: String(e?.message ?? e) });
     return NextResponse.json({ error: 'Erro ao remover categoria', details: String(e?.message ?? e) }, { status: 500 });
   }
 }
@@ -133,6 +137,7 @@ export async function GET(req: NextRequest) {
       productCount: Number(r.product_count) || 0,
     })));
   } catch (e: any) {
+    await logAppError('product-categories GET failed', 'error', { message: String(e?.message ?? e) });
     return NextResponse.json({ error: 'Erro ao listar categorias', details: String(e?.message ?? e) }, { status: 500 });
   }
 }

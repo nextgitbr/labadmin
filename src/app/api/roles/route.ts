@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client } from 'pg';
 import { permissionsList } from '@/permissions/permissionsList';
+import { logAppError } from '@/lib/logError';
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Erro ao buscar roles:', error);
     const fallback = mapRolesForSelect(permissionsList.map(r => r.role));
+    await logAppError('roles GET failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ roles: fallback }, { status: 200 });
   }
 }

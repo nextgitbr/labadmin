@@ -9,6 +9,7 @@ export interface UserPermissionsModalProps {
 import React, { useState, useEffect, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { Permissions, User, PedidosPermissions } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
 
 function SimpleModal({ open, onClose, title, children }: { open: boolean, onClose: () => void, title: string, children: React.ReactNode }) {
   if (!open) return null;
@@ -37,23 +38,27 @@ export function UserPermissionsModal({ isOpen, onClose, user, onSave }: UserPerm
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const lastUserId = useRef<string | null>(null);
+  const { user: currentUser } = useAuth(false);
 
   useEffect(() => {
     if (isOpen && user?._id && lastUserId.current !== user._id) {
       const fetchPermissions = async () => {
         setLoading(true);
         try {
+          console.log('🔍 Modal: Buscando permissões para usuário:', user._id);
           const response = await fetch(`/api/users/${user._id}`);
           if (!response.ok) throw new Error('Falha ao buscar permissões');
           const userData = await response.json();
+          console.log('📥 Modal: Permissões recebidas do banco:', userData.permissions);
           if (userData?.permissions) {
             setPerms(structuredClone(userData.permissions));
+            console.log('✅ Modal: Permissões carregadas no estado:', userData.permissions);
           } else {
             setPerms(null);
           }
           lastUserId.current = user._id;
         } catch (error) {
-          console.error("Erro ao buscar permissões:", error);
+          console.error("❌ Modal: Erro ao buscar permissões:", error);
           toast.error("Não foi possível carregar as permissões.");
           setPerms(null);
         } finally {
@@ -68,11 +73,11 @@ export function UserPermissionsModal({ isOpen, onClose, user, onSave }: UserPerm
   }, [isOpen, user?._id]);
 
   const toggle = (path: string, subpath?: keyof PedidosPermissions) => {
-    console.log('🔄 Toggle chamado:', { path, subpath });
+    console.log('🔄 Modal: Toggle chamado:', { path, subpath, currentValue: perms?.[path] });
     setPerms(currentPerms => {
       if (!currentPerms) return null;
       const newPerms = structuredClone(currentPerms);
-      console.log('📝 Permissões antes:', currentPerms);
+      console.log('📝 Modal: Permissões antes do toggle:', currentPerms);
       
       if (subpath && typeof newPerms[path] === 'object') {
         (newPerms[path] as PedidosPermissions)[subpath] = !(newPerms[path] as PedidosPermissions)[subpath];
@@ -80,7 +85,8 @@ export function UserPermissionsModal({ isOpen, onClose, user, onSave }: UserPerm
         (newPerms[path] as boolean) = !(newPerms[path] as boolean);
       }
       
-      console.log('📝 Permissões depois:', newPerms);
+      console.log('📝 Modal: Permissões depois do toggle:', newPerms);
+      console.log('🎯 Modal: Valor específico alterado:', { path, newValue: newPerms[path] });
       return newPerms;
     });
   };
@@ -105,8 +111,22 @@ export function UserPermissionsModal({ isOpen, onClose, user, onSave }: UserPerm
       
       const result = await response.json();
       console.log('✅ Resposta da API:', result);
-      
+
       toast.success('Permissões salvas com sucesso!');
+
+      // Atualiza sessão APENAS se o usuário editado for o mesmo que está logado
+      if (currentUser && result && result._id && currentUser._id === result._id) {
+        try {
+          localStorage.setItem('labadmin_user', JSON.stringify(result));
+          // Recarregar para garantir que hooks e Sidebar apliquem as permissões atuais
+          window.location.reload();
+          return; // evita fechar modal após reload
+        } catch (e) {
+          console.warn('⚠️ Não foi possível atualizar o localStorage com o usuário atualizado.', e);
+        }
+      }
+
+      // Se não for o usuário logado, apenas fecha modal sem mexer na sessão atual
       onClose();
     } catch (error) {
       console.error("❌ Erro ao salvar permissões:", error);
@@ -205,7 +225,10 @@ export function UserPermissionsModal({ isOpen, onClose, user, onSave }: UserPerm
 
             {/* Kanban */}
             <label className="flex items-center space-x-3">
-              <input type="checkbox" checked={!!perms.kanban} onChange={() => toggle('kanban')} className="h-5 w-5 text-blue-light-500 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-light-500" />
+              <input type="checkbox" checked={!!perms.kanban} onChange={() => {
+                console.log('🟦 Modal: Checkbox Kanban clicado. Valor atual:', perms.kanban);
+                toggle('kanban');
+              }} className="h-5 w-5 text-blue-light-500 rounded border-gray-300 dark:border-gray-600 focus:ring-blue-light-500" />
               <span className="text-sm text-gray-700 dark:text-gray-300">Kanban</span>
             </label>
 

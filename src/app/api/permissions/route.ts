@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client } from 'pg';
 import { permissionsList } from '@/permissions/permissionsList';
+import { logAppError } from '@/lib/logError';
 
 // GET: retorna lista de permissões por role
 export async function GET(req: NextRequest) {
@@ -102,6 +103,7 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     console.error('Erro na API permissions:', e);
     // Fallback: retorna permissões padrão em caso de erro
+    await logAppError('permissions GET failed', 'error', { message: (e as any)?.message });
     return NextResponse.json(permissionsList, { status: 200 });
   }
 }
@@ -153,6 +155,7 @@ export async function DELETE(req: NextRequest) {
       await pg.end();
     }
   } catch (e) {
+    await logAppError('permissions DELETE failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({ error: 'Erro ao remover role' }, { status: 500 });
   }
 }
@@ -201,6 +204,7 @@ export async function PUT(req: NextRequest) {
       await pg.end();
     }
   } catch (e) {
+    await logAppError('permissions PUT failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({ error: 'Erro ao atualizar permissões' }, { status: 500 });
   }
 }

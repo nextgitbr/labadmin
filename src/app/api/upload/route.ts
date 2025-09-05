@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { logAppError } from '@/lib/logError';
 
 export const runtime = 'nodejs';
 
@@ -9,10 +10,12 @@ export async function GET() {
     const { data, error } = await supabase.storage.listBuckets();
     if (error) {
       console.error('Erro ao listar buckets:', error);
+      await logAppError('upload GET buckets failed', 'error', { message: String(error?.message || error) });
       return NextResponse.json({ error: 'Falha ao listar buckets', details: String(error.message || error) }, { status: 500 });
     }
     return NextResponse.json({ buckets: data });
   } catch (e: any) {
+    await logAppError('upload GET failed', 'error', { message: String(e?.message || e) });
     return NextResponse.json({ error: 'Supabase não configurado', details: String(e?.message || e) }, { status: 500 });
   }
 }
@@ -81,6 +84,7 @@ export async function POST(req: NextRequest) {
 
     if (upErr) {
       console.error('Upload Supabase falhou:', upErr);
+      await logAppError('upload POST failed', 'error', { message: String(upErr?.message || upErr) });
       return NextResponse.json({ error: 'Falha no upload' }, { status: 500 });
     }
 
@@ -102,6 +106,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(payload, { status: 201 });
   } catch (e) {
     console.error('Erro no upload:', e);
+    await logAppError('upload POST failed', 'error', { message: String(e) });
     return NextResponse.json({ error: 'Erro interno no upload' }, { status: 500 });
   }
 }

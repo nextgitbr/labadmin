@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // Pool Postgres (Supabase/PG) com fallbacks e SSL condicional
 const PG_CONN =
@@ -96,6 +97,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ notifications: list, unreadCount, total: list.length });
   } catch (error) {
     console.error('❌ Erro na API notifications GET (PG):', error);
+    await logAppError('notifications GET failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -141,6 +143,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(created, { status: 201 });
   } catch (error) {
     console.error('❌ Erro ao criar notificação (PG):', error);
+    await logAppError('notifications POST failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -236,6 +239,7 @@ export async function PATCH(req: NextRequest) {
   } catch (error: any) {
     console.error('❌ Erro ao atualizar notificação (PG):', error);
     console.error('❌ Stack trace:', error?.stack);
+    await logAppError('notifications PATCH failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({
       error: 'Erro interno do servidor',
       details: error?.message || 'Erro desconhecido',
@@ -276,6 +280,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('❌ Erro ao remover notificação (PG):', error);
+    await logAppError('notifications DELETE failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

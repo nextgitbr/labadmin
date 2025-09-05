@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { encrypt, decrypt, hashPassword, verifyPassword } from '@/lib/crypto';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // PG pool com fallbacks e SSL condicional
 const PG_CONN =
@@ -74,6 +75,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, user });
   } catch (error) {
     console.error('Erro ao buscar perfil (PG):', error);
+    await logAppError('user/profile GET failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ success: false, message: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -160,6 +162,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true, message: 'Perfil atualizado com sucesso', user: mapUserRow(rows[0]) });
   } catch (error) {
     console.error('Erro ao atualizar perfil (PG):', error);
+    await logAppError('user/profile PUT failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ success: false, message: 'Erro interno do servidor' }, { status: 500 });
   }
 }

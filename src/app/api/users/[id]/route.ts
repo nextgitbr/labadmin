@@ -1,6 +1,7 @@
 import { NextResponse, NextRequest } from 'next/server';
 import { Pool } from 'pg';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // Postgres pool com fallbacks e SSL condicional
 const PG_CONN =
@@ -94,7 +95,8 @@ export async function GET(request: NextRequest, context: any) {
     console.log('🔍 Buscando usuário por ID...');
     console.log('🔗 Conexão PostgreSQL:', PG_CONN ? '[CONFIGURADA]' : '[NÃO CONFIGURADA]');
     
-    const { id } = (context?.params || {}) as { id: string };
+    const params = await context?.params;
+    const { id } = (params || {}) as { id: string };
     console.log('📋 ID recebido:', id);
     
     const userId = Number(id);
@@ -127,6 +129,7 @@ export async function GET(request: NextRequest, context: any) {
     console.error('❌ Porta:', error?.port);
     
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    await logAppError('users/[id] GET failed', 'error', { message: errorMessage, code: error?.code });
     return NextResponse.json({ 
       message: 'Erro interno do servidor', 
       error: errorMessage,
@@ -142,7 +145,8 @@ export async function DELETE(request: NextRequest, context: any) {
     console.log('🗑️ Removendo usuário...');
     console.log('🔗 Conexão PostgreSQL:', PG_CONN ? '[CONFIGURADA]' : '[NÃO CONFIGURADA]');
     
-    const { id } = (context?.params || {}) as { id: string };
+    const params = await context?.params;
+    const { id } = (params || {}) as { id: string };
     console.log('📋 ID recebido:', id);
     
     const userId = Number(id);
@@ -174,6 +178,7 @@ export async function DELETE(request: NextRequest, context: any) {
     console.error('❌ Porta:', error?.port);
     
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    await logAppError('users/[id] DELETE failed', 'error', { message: errorMessage, code: error?.code });
     return NextResponse.json({ 
       message: 'Erro interno do servidor', 
       error: errorMessage,
@@ -189,7 +194,8 @@ export async function PUT(request: NextRequest, context: any) {
     console.log('✏️ Atualizando permissões do usuário...');
     console.log('🔗 Conexão PostgreSQL:', PG_CONN ? '[CONFIGURADA]' : '[NÃO CONFIGURADA]');
     
-    const { id } = (context?.params || {}) as { id: string };
+    const params = await context?.params;
+    const { id } = (params || {}) as { id: string };
     console.log('📋 ID recebido:', id);
     
     const userId = Number(id);
@@ -239,6 +245,7 @@ export async function PUT(request: NextRequest, context: any) {
     console.error('❌ Porta:', error?.port);
     
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    await logAppError('users/[id] PUT failed', 'error', { message: errorMessage, code: error?.code });
     return NextResponse.json({ 
       message: 'Erro interno do servidor', 
       error: errorMessage,

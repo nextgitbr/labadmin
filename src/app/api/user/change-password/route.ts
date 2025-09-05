@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { hashPassword, verifyPassword } from '@/lib/crypto';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // Postgres pool com fallbacks e SSL condicional
 const PG_CONN =
@@ -70,6 +71,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, message: 'Senha alterada com sucesso' });
   } catch (error) {
     console.error('Erro ao alterar senha (PG):', error);
+    await logAppError('user/change-password POST failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ success: false, message: 'Erro interno do servidor' }, { status: 500 });
   }
 }

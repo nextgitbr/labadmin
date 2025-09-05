@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { requireAuth } from '@/lib/apiAuth';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // Postgres pool com fallbacks e SSL condicional
 const PG_CONN =
@@ -44,6 +45,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(rows.map(mapComment));
   } catch (e) {
     console.error('Erro ao listar comentários de produção:', e);
+    await logAppError('production/comments GET failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -75,6 +77,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(mapComment(rows[0]), { status: 201 });
   } catch (e) {
     console.error('Erro ao criar comentário de produção:', e);
+    await logAppError('production/comments POST failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({ message: 'Erro interno do servidor' }, { status: 500 });
   }
 }

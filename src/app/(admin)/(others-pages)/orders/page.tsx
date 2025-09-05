@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import PageBreadcrumb from "@/components/common/PageBreadCrumb";
 import AuthGuard from '@/components/auth/AuthGuard';
@@ -54,6 +54,7 @@ export default function Pedidos() {
   const [stageById, setStageById] = useState<Record<string, Stage>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleNewOrder = () => {
     setIsModalOpen(true);
@@ -126,6 +127,18 @@ export default function Pedidos() {
     }
   }, [authLoading, user]);
 
+  // Filtro unificado: busca por ID do pedido (orderNumber) OU criador (createdBy)
+  const filteredOrders = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return orders;
+    const qNoHash = q.replace(/^#/, "");
+    return orders.filter((o) => {
+      const idStr = String(o.orderNumber || "").toLowerCase();
+      const creatorStr = String(o.createdBy || "").toLowerCase();
+      return idStr.includes(qNoHash) || creatorStr.includes(q);
+    });
+  }, [orders, searchQuery]);
+
   const handleSubmitOrder = async (orderData: OrderData) => {
     try {
       console.log('Novo pedido sendo criado:', orderData);
@@ -197,13 +210,25 @@ export default function Pedidos() {
         <PageBreadcrumb pageTitle="Pedidos" />
 
         <div className="p-4 border-t border-gray-100 dark:border-gray-800 sm:p-6">
-          <div className="flex justify-end mb-2">
-            <button 
-              onClick={handleNewOrder}
-              className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-[#e9e9e9] dark:text-[#e9decf] shadow-theme-xs bg-[#4158e7] hover:bg-[#2331a3] dark:bg-[#1c255d] dark:hover:bg-[#232d73] transition-colors"
-            >
-              <span className="text-lg leading-none">+ Novo Pedido</span>
-            </button>
+          {/* Barra de busca (único campo) */}
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-3">
+            <div className="w-full md:w-auto">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar por ID do pedido ou criador (nome/email)"
+                className="w-full md:w-[32rem] px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+            <div className="flex justify-end">
+              <button 
+                onClick={handleNewOrder}
+                className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-[#e9e9e9] dark:text-[#e9decf] shadow-theme-xs bg-[#4158e7] hover:bg-[#2331a3] dark:bg-[#1c255d] dark:hover:bg-[#232d73] transition-colors"
+              >
+                <span className="text-lg leading-none">+ Novo Pedido</span>
+              </button>
+            </div>
           </div>
           <div className="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-white/[0.05] dark:bg-white/[0.03]">
             <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -211,6 +236,7 @@ export default function Pedidos() {
                 <tr>
                   <th className="px-6 py-3 text-left font-medium text-gray-500">ID</th>
                   <th className="px-6 py-3 text-left font-medium text-gray-500">Nome do Paciente</th>
+                  <th className="px-6 py-3 text-left font-medium text-gray-500">Criado por</th>
                   <th className="px-6 py-3 text-left font-medium text-gray-500">Status</th>
                   <th className="px-6 py-3 text-left font-medium text-gray-500">Data Criação</th>
                   <th className="px-6 py-3 text-left font-medium text-gray-500">Data Estimada de Término</th>
@@ -240,7 +266,7 @@ export default function Pedidos() {
                     </td>
                   </tr>
                 ) : (
-                  orders.map((order) => (
+                  filteredOrders.map((order) => (
                     <tr key={order._id} className="bg-white even:bg-gray-50 dark:bg-white/[0.01] dark:even:bg-white/[0.03]">
                       <td className="px-6 py-4 whitespace-nowrap text-gray-700 dark:text-white/90">#{order.orderNumber}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
@@ -251,6 +277,7 @@ export default function Pedidos() {
                           {order.patientName}
                         </Link>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-700 dark:text-white/90">{order.createdBy || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
                           className="inline-flex rounded-full px-2 text-xs font-semibold leading-5 border"

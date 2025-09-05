@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Client } from 'pg';
 import { requireAuth } from '@/lib/apiAuth';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // Fallbacks de conexão para Postgres
 const PG_CONN =
@@ -154,6 +155,7 @@ export async function PATCH(req: NextRequest) {
     }
   } catch (error) {
     console.error('Erro ao atualizar etapa:', error);
+    await logAppError('stages PATCH failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -187,6 +189,7 @@ export async function GET(req: NextRequest) {
     }
   } catch (error) {
     console.error('Erro ao buscar etapas:', error);
+    await logAppError('stages GET failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -226,6 +229,7 @@ export async function POST(req: NextRequest) {
     }
   } catch (error) {
     console.error('Erro ao criar etapa:', error);
+    await logAppError('stages POST failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -255,6 +259,7 @@ export async function PUT(req: NextRequest) {
     }
   } catch (error) {
     console.error('Erro ao atualizar ordem das etapas:', error);
+    await logAppError('stages PUT failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -282,6 +287,7 @@ export async function DELETE(req: NextRequest) {
     }
   } catch (error) {
     console.error('Erro ao remover etapa:', error);
+    await logAppError('stages DELETE failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

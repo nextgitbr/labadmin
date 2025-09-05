@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { requireAuth } from '@/lib/apiAuth';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // Postgres pool (Supabase/PG) com fallbacks e SSL condicional
 const PG_CONN =
@@ -53,6 +54,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(rows.map((r: any) => mapStage(r, materialsMap.get(String(r.id)) || [])));
   } catch (e) {
     console.error('Erro ao listar stages de produção:', e);
+    await logAppError('production/stages GET failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -107,6 +109,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(mapStage(rows[0], mats.rows.map((r: any) => String(r.material))));
   } catch (e) {
     console.error('Erro ao upsert stage de produção:', e);
+    await logAppError('production/stages POST failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({ message: 'Erro interno do servidor' }, { status: 500 });
   }
 }

@@ -18,27 +18,20 @@ export function useAuth(redirectToLogin = true) {
       console.log('🔍 Role do usuário:', parsed.role);
       console.log('🔍 Permissões do usuário:', parsed.permissions);
       
-      // Se só tem email ou não tem _id, buscar dados completos na API
-      if (parsed && (!parsed._id || Object.keys(parsed).length <= 2)) {
+      // Se objeto é parcial ou inconsistente, buscar dados completos na API
+      const isPartial = parsed && (Object.keys(parsed).length <= 2 || (!parsed._id && !parsed.email));
+      if (parsed && (isPartial || !parsed._id || !parsed.email)) {
         console.log('📡 Buscando dados completos do usuário via API...');
-        
-        apiClient.get(`/api/users?email=${encodeURIComponent(parsed.email)}`)
+
+        const fetchById = parsed?._id ? apiClient.get(`/api/users/${encodeURIComponent(parsed._id)}`) : null;
+        const fetchByEmail = !parsed?._id && parsed?.email ? apiClient.get(`/api/users?email=${encodeURIComponent(parsed.email)}`) : null;
+
+        (fetchById || fetchByEmail || Promise.reject(new Error('Missing identifier')))
           .then((fullUser: any) => {
             console.log('📊 Dados completos recebidos:', fullUser);
             
             if (fullUser && !fullUser.error && fullUser._id) {
               console.log('✅ Salvando dados completos no localStorage');
-              
-              // Garantir que administrador tenha permissões mínimas
-              if (fullUser.role === 'administrator') {
-                console.log('🔧 Forçando permissões mínimas para administrador (kanban, configuracoes, configuracoesKanban, tasklist, notice)');
-                fullUser.permissions = fullUser.permissions || {};
-                fullUser.permissions.kanban = true;
-                fullUser.permissions.configuracoes = true;
-                fullUser.permissions.configuracoesKanban = true;
-                fullUser.permissions.tasklist = true;
-                fullUser.permissions.notice = true;
-              }
               
               localStorage.setItem("labadmin_user", JSON.stringify(fullUser));
               setUser(fullUser);
@@ -64,18 +57,7 @@ export function useAuth(redirectToLogin = true) {
       } else {
         console.log('✅ Dados completos já disponíveis no localStorage');
         
-        // Garantir que administrador tenha permissões mínimas mesmo nos dados do localStorage
-        if (parsed.role === 'administrator') {
-          console.log('🔧 Forçando permissões mínimas para administrador no localStorage');
-          parsed.permissions = parsed.permissions || {};
-          parsed.permissions.kanban = true;
-          parsed.permissions.configuracoes = true;
-          parsed.permissions.configuracoesKanban = true;
-          parsed.permissions.tasklist = true;
-          parsed.permissions.notice = true;
-          localStorage.setItem("labadmin_user", JSON.stringify(parsed));
-        }
-        
+        // Não forçar permissões de administrador: refletir exatamente o que está no banco
         setUser(parsed);
         setLoading(false);
       }

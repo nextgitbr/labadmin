@@ -16,6 +16,7 @@ import PinProtection from '@/components/auth/PinProtection';
 import SessionAlertSettings from '@/components/settings/SessionAlertSettings';
 import SuccessAlertSettings from '@/components/settings/SuccessAlertSettings';
 import LocalStorageSettings from '@/components/settings/LocalStorageSettings';
+import SystemStatusCard from '@/components/settings/SystemStatusCard';
 
 import AuthGuard from '@/components/auth/AuthGuard';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -89,22 +90,7 @@ export default function SettingsPage() {
                 content: (
                   <div className="space-y-6">
                     {/* Status da aplicação, erros, versão, usuários logados, última atualização */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 dark:bg-red-900/10 dark:border-red-900/30">
-                        <span className="font-semibold text-red-600 dark:text-red-400">Erros em execução</span>
-                        <div className="mt-2 text-sm text-red-700 dark:text-red-300">Nenhum erro no momento.</div>
-                      </div>
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 dark:bg-gray-900/10 dark:border-gray-900/30">
-                        <div className="flex flex-col gap-2">
-                          <span className="font-medium text-gray-700 dark:text-gray-200">Versão da Build</span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">2.0.2</span>
-                          <span className="font-medium text-gray-700 dark:text-gray-200">Usuários logados</span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">2</span>
-                          <span className="font-medium text-gray-700 dark:text-gray-200">Última Atualização</span>
-                          <span className="text-sm text-gray-500 dark:text-gray-400">01/08/2025 10:00</span>
-                        </div>
-                      </div>
-                    </div>
+                    <SystemStatusCard />
                   </div>
                 )
               },

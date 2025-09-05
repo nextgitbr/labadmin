@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { requireAuth } from '@/lib/apiAuth';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // Postgres pool com fallbacks e SSL condicional
 const PG_CONN =
@@ -70,6 +71,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(rows.map(mapProductionRow));
   } catch (e) {
     console.error('Erro ao listar produção:', e);
+    await logAppError('production GET failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -111,6 +113,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(mapProductionRow(rows[0]), { status: 201 });
   } catch (e) {
     console.error('Erro ao criar job de produção:', e);
+    await logAppError('production POST failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({ message: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -149,6 +152,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(mapProductionRow(rows[0]));
   } catch (e) {
     console.error('Erro ao atualizar job de produção:', e);
+    await logAppError('production PATCH failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

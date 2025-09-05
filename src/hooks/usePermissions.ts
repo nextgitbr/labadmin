@@ -103,25 +103,32 @@ export function usePermissions(
       finalPermissions = rolePerms ? { ...rolePerms } : null;
     }
     
-    // Garantir que administrador (inclui aliases) sempre tenha kanban e configuracoes
-    const normRole = normalizeRole(role);
-    if (finalPermissions && normRole === 'administrator') {
-      console.log('🔧 Forçando permissões para administrador (kanban/configuracoes)');
-      finalPermissions.kanban = true;
-      finalPermissions.configuracoes = true;
-      finalPermissions.configuracoesKanban = true;
-    }
+    // Não force permissões por role; respeitar exatamente o que vem do usuário/DB
     
     return finalPermissions;
   }, [role, permissionsList, userPermissions]);
 
   // Helper para checar permissão simples ou aninhada (ex: 'pedidos.visualizar')
   function canAccess(key: string): boolean {
-    console.log('🔐 canAccess chamado:', { key, permissions });
+    console.log(`🔐 canAccess("${key}") chamado`);
+    console.log('🔗 Permissions object:', permissions);
     
     if (!permissions) {
       console.log('❌ Sem permissões disponíveis');
       return false;
+    }
+    
+    // Special handling for pedidos - check if at least one sub-permission is true
+    if (key === 'pedidos') {
+      const pedidosPerms = permissions.pedidos;
+      console.log('📋 Pedidos permissions:', pedidosPerms);
+      if (pedidosPerms && (pedidosPerms.visualizar || pedidosPerms.criar || pedidosPerms.editar)) {
+        console.log('✅ Pedidos permitido (pelo menos uma sub-permissão é true)');
+        return true;
+      } else {
+        console.log('❌ Pedidos negado (todas as sub-permissões são false)');
+        return false;
+      }
     }
     
     // Suporte a permissões aninhadas com ponto
@@ -138,7 +145,7 @@ export function usePermissions(
     }
     
     const result = Boolean(current);
-    console.log('🔐 Resultado canAccess:', { key, result, finalValue: current });
+    console.log(`🔐 Resultado canAccess("${key}"):`, { value: current, result });
     return result;
   }
 

@@ -6,6 +6,7 @@ import Button from "@/components/ui/button/Button";
 import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "@/icons";
 import Link from "next/link";
 import React, { useState } from "react";
+import { getFirstAllowedPage } from '@/utils/authUtils';
 
 export default function SignInForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -61,8 +62,12 @@ export default function SignInForm() {
                   localStorage.setItem('labadmin_token', token);
                   localStorage.setItem('labadmin_user', JSON.stringify(user));
                   
+                  // Determinar a primeira página permitida baseada nas permissões
+                  const redirectPath = getFirstAllowedPage(user.permissions);
+                  console.log('🔄 Redirecionando para:', redirectPath);
+                  
                   // Forçar recarregamento completo da página para garantir que todas as configurações sejam carregadas
-                  window.location.href = '/';
+                  window.location.href = redirectPath;
                 } catch (err) {
                   console.error('Erro no login:', err);
                   setError('Erro ao conectar. Tente novamente.');

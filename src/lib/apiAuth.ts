@@ -27,12 +27,14 @@ export async function requireAuth(req: NextRequest): Promise<AuthUser> {
     const jwtPayload = verifyToken(token);
     if (jwtPayload) {
       console.log('✅ Autenticação JWT válida para usuário:', jwtPayload.userId);
-      return { 
-        id: jwtPayload.userId, 
+      const user: AuthUser = {
+        id: jwtPayload.userId,
         email: jwtPayload.email,
         role: jwtPayload.role,
-        permissions: jwtPayload.permissions
+        permissions: jwtPayload.permissions,
       };
+      await upsertSessionActivity(req, user);
+      return user;
     }
 
     // Se não for JWT válido, tenta como token do Supabase
@@ -46,10 +48,9 @@ export async function requireAuth(req: NextRequest): Promise<AuthUser> {
     }
 
     console.log('✅ Autenticação Supabase válida para usuário:', data.user.email);
-    return { 
-      id: data.user.id, 
-      email: data.user.email 
-    };
+    const user: AuthUser = { id: data.user.id, email: data.user.email };
+    await upsertSessionActivity(req, user);
+    return user;
   } catch (error: any) {
     console.error('❌ Erro na autenticação:', error.message);
     throw Object.assign(new Error('Falha na autenticação'), { 
@@ -145,4 +146,36 @@ export async function requireRole(req: NextRequest, allowed: string[]): Promise<
   const role = await getUserRole(user);
   assertRole(role, allowed);
   return { user, role };
+}
+
+// Upsert de atividade de sessão do usuário autenticado
+async function upsertSessionActivity(req: NextRequest, user: AuthUser) {
+  try {
+    const conn =
+      (process.env.PG_URI as string | undefined) ||
+      (process.env.DATABASE_URL as string | undefined) ||
+      (process.env.POSTGRES_URL as string | undefined) ||
+      (process.env.POSTGRES_PRISMA_URL as string | undefined) ||
+      (process.env.POSTGRES_URL_NON_POOLING as string | undefined);
+    if (!conn) return;
+    const needsSsl = /supabase\.(co|com)/.test(conn) || /sslmode=require/i.test(conn);
+    const ssl = needsSsl ? { rejectUnauthorized: false } : undefined;
+    const pg = new Client({ connectionString: conn, ssl });
+    await pg.connect();
+    try {
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || (req as any).ip || null;
+      const ua = req.headers.get('user-agent') || '';
+      await pg.query(
+        `insert into public.sessions (user_id, email, last_ip, user_agent, created_at, updated_at)
+         values ($1,$2,$3,$4, now(), now())
+         on conflict (user_id)
+         do update set email=excluded.email, last_ip=excluded.last_ip, user_agent=excluded.user_agent, updated_at=now()`,
+        [user.id, user.email || null, ip, ua]
+      );
+    } finally {
+      await pg.end();
+    }
+  } catch (e) {
+    console.warn('⚠️ Falha ao registrar atividade de sessão:', (e as any)?.message);
+  }
 }

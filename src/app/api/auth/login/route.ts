@@ -3,6 +3,7 @@ import { Pool } from 'pg';
 import { verifyPassword } from '@/lib/crypto';
 import { generateToken } from '@/lib/jwt';
 import { requireSupabaseAdmin } from '@/lib/supabaseAdmin';
+import { logAppError } from '@/lib/logError';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -72,6 +73,7 @@ export async function POST(req: NextRequest) {
       user = result.rows[0];
     } catch (error: any) {
       console.error('[LOGIN] Erro ao buscar usuário:', error?.message || error);
+      await logAppError('login user fetch failed', 'error', { message: error?.message || String(error) });
       return NextResponse.json(
         { error: 'Erro ao processar a autenticação' }, 
         { status: 500 }
@@ -154,6 +156,7 @@ export async function POST(req: NextRequest) {
       }
     } catch (syncError: any) {
       console.warn('[LOGIN] Aviso: erro na sincronização com Supabase Auth (continuando com JWT):', syncError.message);
+      await logAppError('login supabase sync warning', 'warn', { message: syncError?.message || String(syncError) });
       // Não bloquear o login se a sincronização falhar
     }
 
@@ -188,6 +191,7 @@ export async function POST(req: NextRequest) {
 
   } catch (error) {
     console.error('❌ Erro no login:', error);
+    await logAppError('login POST failed', 'error', { message: (error as any)?.message });
     return NextResponse.json(
       { error: 'Erro interno do servidor' }, 
       { status: 500 }

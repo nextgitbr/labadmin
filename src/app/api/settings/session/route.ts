@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client as PgClient } from 'pg';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // Fallbacks de conexão para Postgres
 const PG_CONN =
@@ -46,6 +47,7 @@ export async function GET(req: NextRequest) {
     }
   } catch (e) {
     console.error('Erro ao buscar tempo de sessão:', e);
+    await logAppError('settings/session GET failed', 'error', { message: String(e) });
     return NextResponse.json({ error: 'Erro ao buscar tempo de sessão', details: String(e) }, { status: 500 });
   }
 }
@@ -85,6 +87,7 @@ export async function PUT(req: NextRequest) {
     }
   } catch (e) {
     console.error('Erro ao atualizar tempo de sessão:', e);
+    await logAppError('settings/session PUT failed', 'error', { message: String(e) });
     return NextResponse.json({ error: 'Erro ao atualizar tempo de sessão', details: String(e) }, { status: 500 });
   }
 }

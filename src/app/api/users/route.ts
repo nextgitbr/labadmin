@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { encrypt, decrypt, hashPassword } from '@/lib/crypto';
 import { permissionsList } from '@/permissions/permissionsList';
+import { logAppError } from '@/lib/logError';
 
 // Postgres pool (Supabase/PG) com fallbacks e SSL condicional
 const PG_CONN =
@@ -70,29 +71,14 @@ export async function GET(req: NextRequest) {
 
     if (email) {
       const { rows } = await pool.query(
-        `select * from public.users where lower(email) = lower($1) limit 1`,
+        `select * from public.users where trim(lower(email)) = trim(lower($1)) limit 1`,
         [email]
       );
       if (!rows.length) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
       }
-      // Ajuste de permissões para admin (compatibilidade com lógica antiga)
       const row = rows[0];
-      if (email.toLowerCase() === 'admin@labadmin.com') {
-        const perms = row.permissions || {};
-        const normalizedPerms = { ...perms, kanban: true, tasklist: true, notice: true };
-        if (row.role !== 'administrator' || JSON.stringify(perms) !== JSON.stringify(normalizedPerms)) {
-          await pool.query(`update public.users set role = 'administrator', permissions = $1 where id = $2`, [
-            normalizedPerms,
-            row.id,
-          ]);
-          row.role = 'administrator';
-          row.permissions = normalizedPerms;
-        } else {
-          row.role = 'administrator';
-          row.permissions = normalizedPerms;
-        }
-      }
+      // Não forçar permissões para administradores aqui; devolver exatamente o que está no banco
       return NextResponse.json(mapUserRow(row));
     }
 
@@ -110,6 +96,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(rows.map(mapUserRow));
   } catch (error) {
     console.error('❌ Erro na API users (GET):', error);
+    await logAppError('users GET failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -161,6 +148,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(mapUserRow(rows[0]), { status: 201 });
   } catch (error) {
     console.error('❌ Erro ao criar usuário (POST):', error);
+    await logAppError('users POST failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ message: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -207,6 +195,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json(mapUserRow(rows[0]));
   } catch (error) {
     console.error('❌ Erro ao editar usuário (PATCH):', error);
+    await logAppError('users PATCH failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
@@ -224,6 +213,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 });
   } catch (error) {
     console.error('❌ Erro ao deletar usuário (DELETE):', error);
+    await logAppError('users DELETE failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

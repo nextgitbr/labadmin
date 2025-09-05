@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client } from 'pg';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // Aceitar múltiplos nomes de variável de conexão para ambientes diferentes
 const PG_URI =
@@ -103,6 +104,7 @@ export async function GET() {
     }, { status: 200 });
   } catch (e) {
     console.error('Error on GET /api/settings/notice:', e);
+    await logAppError('settings/notice GET failed', 'error', { message: (e as any)?.message });
     return NextResponse.json(defaultNotice(), { status: 200 });
   } finally {
     if (pg) await pg.end();
@@ -213,6 +215,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ message: 'ok' }, { status: 200 });
   } catch (e) {
     console.error('Error on PUT /api/settings/notice:', e);
+    await logAppError('settings/notice PUT failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({ message: 'Internal error' }, { status: 500 });
   } finally {
     if (pg) await pg.end();

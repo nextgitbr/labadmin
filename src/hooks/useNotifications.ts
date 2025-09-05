@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
+import { apiClient } from '@/lib/apiClient';
 
 export type NotificationType = 'order_created' | 'order_updated' | 'status_changed' | 'comment_added' | 'order_assigned' | 'system';
 
@@ -123,26 +124,26 @@ export function useNotifications() {
   // Remover notificação
   const removeNotification = useCallback(async (notificationId: string) => {
     try {
-      const response = await fetch(`/api/notifications?id=${notificationId}`, {
-        method: 'DELETE'
-      });
+      await apiClient.delete(`/api/notifications?id=${notificationId}`);
 
-      if (!response.ok) {
-        throw new Error('Erro ao remover notificação');
-      }
-
-      // Atualizar estado local
+      // Atualizar estado local como sucesso
       const notificationToRemove = notifications.find(n => n._id === notificationId);
-      
-      setNotifications(prev => 
-        prev.filter(notif => notif._id !== notificationId)
-      );
 
+      setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
       if (notificationToRemove && !notificationToRemove.isRead) {
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
 
-    } catch (err) {
+    } catch (err: any) {
+      // Se já não existe no servidor (404), tratar como sucesso local
+      if (err?.status === 404) {
+        const notificationToRemove = notifications.find(n => n._id === notificationId);
+        setNotifications(prev => prev.filter(notif => notif._id !== notificationId));
+        if (notificationToRemove && !notificationToRemove.isRead) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+        return;
+      }
       console.error('❌ Erro ao remover notificação:', err);
     }
   }, [notifications]);

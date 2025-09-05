@@ -23,7 +23,6 @@ export default function Ecommerce() {
   return (
     <AuthGuard requiredPermission="dashboard">
     <div className="grid grid-cols-12 gap-4 md:gap-6">
-      <LatestOrdersSection />
       <div className="col-span-12 space-y-6 xl:col-span-7">
         <WelcomeCard />
       </div>
@@ -31,6 +30,7 @@ export default function Ecommerce() {
       <div className="col-span-12 xl:col-span-5">
       <CardFraseAleatoria />
       </div>
+      <LatestOrdersSection />
     </div>
     </AuthGuard>
   );

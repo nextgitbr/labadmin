@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Pool } from 'pg';
 import { decrypt } from '@/lib/crypto';
 import '@/lib/sslFix'; // Aplicar correção SSL global
+import { logAppError } from '@/lib/logError';
 
 // Postgres pool com fallbacks e SSL condicional
 const PG_CONN =
@@ -63,6 +64,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: 'PIN incorreto', valid: false }, { status: 401 });
   } catch (error) {
     console.error('Erro ao validar PIN (PG):', error);
+    await logAppError('user/validate-pin POST failed', 'error', { message: (error as any)?.message });
     return NextResponse.json({ message: 'Erro interno do servidor' }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 "use client";
-import React, { useEffect, useRef, useState,useCallback } from "react";
+
+import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
@@ -9,309 +10,164 @@ import {
   CalenderIcon,
   ChevronDownIcon,
   GridIcon,
-  HorizontaLDots,
   ListIcon,
-  PageIcon,
-  PieChartIcon,
-  PlugInIcon,
   TableIcon,
   UserCircleIcon,
-
   FileIcon,
 } from "../icons/index";
 import SettingsGearIcon from "../icons/SettingsGearIcon";
 import SidebarWidget from "./SidebarWidget";
+import { usePermissions } from "@/hooks/usePermissions";
+import { permissionsList } from "@/permissions/permissionsList";
+import SidebarSessionAlert from '@/components/alerts/SidebarSessionAlert';
+import SidebarSuccessAlert from '@/components/alerts/SidebarSuccessAlert';
+import { useAuth } from "@/hooks/useAuth";
 
 type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  subItems?: { name: string; path: string }[];
 };
 
-import { usePermissions } from "@/hooks/usePermissions";
-import { permissionsList } from "@/permissions/permissionsList";
-import SidebarSessionAlert from '@/components/alerts/SidebarSessionAlert';
-import SidebarSuccessAlert from '@/components/alerts/SidebarSuccessAlert';
+// Simple dropdown item for submenu (e.g., Configurações)
+function SidebarDropdownItem({
+  item,
+  pathname,
+  showText,
+  defaultOpen = false,
+}: {
+  item: NavItem;
+  pathname: string | null;
+  showText: boolean;
+  defaultOpen?: boolean;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
 
-import { useAuth } from "@/hooks/useAuth";
+  return (
+    <div>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`menu-item group ${open ? "menu-item-active" : "menu-item-inactive"} cursor-pointer ${
+          showText ? "lg:justify-start" : "lg:justify-center"
+        }`}
+      >
+        <span className={`${open ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>{item.icon}</span>
+        {showText && <span className="menu-item-text">{item.name}</span>}
+        {showText && (
+          <ChevronDownIcon
+            className={`ml-auto w-5 h-5 transition-transform duration-200 ${open ? "rotate-180 text-brand-500" : ""}`}
+          />
+        )}
+      </button>
 
-const othersItems: NavItem[] = [
-  // Outros itens podem ser adicionados aqui se necessário, atualmente vazio para não aparecer menu 'Others'
-];
-
-const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
-  const pathname = usePathname();
-
-    // Hook de autenticação
-  const { user } = useAuth();
-  // Hook de permissões
-  const { canAccess } = usePermissions(user?.role, permissionsList, user?.permissions);
-
-  // Filtra os menus conforme permissões
-  const filteredNavItems: NavItem[] = [
-    canAccess("dashboard") && {
-      icon: <GridIcon />, name: "Dashboard", path: "/"
-    },
-    canAccess("pedidos") && {
-      icon: <TableIcon />, name: "Pedidos", path: "/orders"
-    },
-    canAccess("kanban") && {
-      icon: <BoxCubeIcon />, name: "Kanban - Pedidos", path: "/kanban"
-    },
-    canAccess("tasklist") && {
-      icon: <ListIcon />, name: "Task List", path: "/task-list"
-    },
-    canAccess("tabelaPrecos") && {
-      icon: <FileIcon />, name: "Tabela de Preços", path: "/tables-pricing"
-    },
-    canAccess("calendar") && {
-      icon: <CalenderIcon />, name: "Calendar", path: "/calendar"
-    },
-    canAccess("usuarios") && {
-      icon: <UserCircleIcon />, name: "Usuários", path: "/users"
-    },
-    canAccess("configuracoes") && {
-      icon: <SettingsGearIcon />, name: "Configurações",
-      subItems: [
-        { name: "Geral", path: "/settings" },
-        { name: "Kanban", path: "/settings/kanban" },
-        canAccess("configuracoesProducao") && { name: "Produção", path: "/settings/production" },
-        canAccess("notice") && { name: "Avisos", path: "/settings/avisos" },
-      ].filter(Boolean) as { name: string; path: string; pro?: boolean; new?: boolean }[],
-    },
-  ].filter(Boolean) as NavItem[];
-
-  const renderMenuItems = (
-    navItems: NavItem[],
-    menuType: "main" | "others"
-  ): React.ReactElement => (
-    <ul className="flex flex-col gap-4">
-      {navItems.map((nav: NavItem, index: number) => (
-        <li key={nav.name}>
-          {nav.subItems ? (
-            <button
-              onClick={() => handleSubmenuToggle(index, menuType)}
-              className={`menu-item group  ${
-                openSubmenu?.type === menuType && openSubmenu?.index === index
-                  ? "menu-item-active"
-                  : "menu-item-inactive"
-              } cursor-pointer ${
-                !isExpanded && !isHovered
-                  ? "lg:justify-center"
-                  : "lg:justify-start"
-              }`}
-            >
-              <span
-                className={` ${
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? "menu-item-icon-active"
-                    : "menu-item-icon-inactive"
-                }`}
-              >
-                {nav.icon}
-              </span>
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <span className={`menu-item-text`}>{nav.name}</span>
-              )}
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <ChevronDownIcon
-                  className={`ml-auto w-5 h-5 transition-transform duration-200  ${
-                    openSubmenu?.type === menuType &&
-                    openSubmenu?.index === index
-                      ? "rotate-180 text-brand-500"
-                      : ""
-                  }`}
-                />
-              )}
-            </button>
-          ) : (
-            nav.path && (
-              <Link
-                href={nav.path}
-                className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                }`}
-              >
-                <span
-                  className={`${
-                    isActive(nav.path)
-                      ? "menu-item-icon-active"
-                      : "menu-item-icon-inactive"
+      {showText && (
+        <div
+          className={`overflow-hidden transition-all duration-300 ${open ? "max-h-96" : "max-h-0"}`}
+        >
+          <ul className="mt-2 space-y-1 ml-9">
+            {(item.subItems || []).map((sub) => (
+              <li key={sub.path}>
+                <Link
+                  href={sub.path}
+                  className={`menu-dropdown-item ${
+                    pathname === sub.path ? "menu-dropdown-item-active" : "menu-dropdown-item-inactive"
                   }`}
                 >
-                  {nav.icon}
-                </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className={`menu-item-text`}>{nav.name}</span>
-                )}
-              </Link>
-            )
-          )}
-          {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
-            <div
-              ref={(el) => {
-                subMenuRefs.current[`${menuType}-${index}`] = el;
-              }}
-              className="overflow-hidden transition-all duration-300"
-              style={{
-                height:
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? `${subMenuHeight[`${menuType}-${index}`]}px`
-                    : "0px",
-              }}
-            >
-              <ul className="mt-2 space-y-1 ml-9">
-                {nav.subItems.map((subItem) => (
-                  <li key={subItem.name}>
-                    <Link
-                      href={subItem.path}
-                      className={`menu-dropdown-item ${
-                        isActive(subItem.path)
-                          ? "menu-dropdown-item-active"
-                          : "menu-dropdown-item-inactive"
-                      }`}
-                    >
-                      {subItem.name}
-                      <span className="flex items-center gap-1 ml-auto">
-                        {subItem.new && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
-                          >
-                            new
-                          </span>
-                        )}
-                        {subItem.pro && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge `}
-                          >
-                            pro
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </li>
-      ))}
-    </ul>
+                  {sub.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
   );
+}
 
-  const [openSubmenu, setOpenSubmenu] = useState<{
-    type: "main" | "others";
-    index: number;
-  } | null>(null);
-  const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>(
-    {}
-  );
-  const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+const AppSidebar: React.FC = () => {
+  // Client logs for visibility
+  console.log("📚 AppSidebar mounted");
 
-  // const isActive = (path: string) => path === pathname;
-   const isActive = useCallback((path: string) => path === pathname, [pathname]);
+  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const pathname = usePathname();
+  const { user } = useAuth();
+  const { canAccess } = usePermissions(user?.role, permissionsList, user?.permissions);
 
-  useEffect(() => {
-    // Check if the current path matches any submenu item
-    let submenuMatched = false;
-    ["main", "others"].forEach((menuType) => {
-      const items = menuType === "main" ? filteredNavItems : othersItems;
-      items.forEach((nav: NavItem, index: number) => {
-        if (nav.subItems) {
-          nav.subItems.forEach((subItem) => {
-            if (isActive(subItem.path)) {
-              setOpenSubmenu({
-                type: menuType as "main" | "others",
-                index,
-              });
-              submenuMatched = true;
-            }
-          });
-        }
-      });
-    });
+  // Build nav items according to permissions (simplified render)
+  const navItems: NavItem[] = useMemo(() => {
+    const items: (NavItem | false)[] = [
+      canAccess("dashboard") && { icon: <GridIcon />, name: "Dashboard", path: "/" },
+      canAccess("pedidos") && { icon: <TableIcon />, name: "Pedidos", path: "/orders" },
+      canAccess("kanban") && { icon: <BoxCubeIcon />, name: "Kanban - Pedidos", path: "/kanban" },
+      canAccess("tasklist") && { icon: <ListIcon />, name: "Task List", path: "/task-list" },
+      canAccess("tabelaPrecos") && { icon: <FileIcon />, name: "Tabela de Preços", path: "/tables-pricing" },
+      canAccess("calendar") && { icon: <CalenderIcon />, name: "Calendar", path: "/calendar" },
+      canAccess("usuarios") && { icon: <UserCircleIcon />, name: "Usuários", path: "/users" },
+      // Configurações: mostrar se tiver a permissão pai OU qualquer sub-permissão
+      (() => {
+        const canSeeSettings =
+          canAccess("configuracoes") ||
+          canAccess("configuracoesKanban") ||
+          canAccess("notice") ||
+          canAccess("configuracoesProducao") ||
+          (canAccess as any)("configuracoesProdutos") ||
+          (canAccess as any)("configuracoesCategorias");
+        if (!canSeeSettings) return false;
+        const subItems: { name: string; path: string }[] = [];
+        // Acesso à página geral de settings somente se 'configuracoes' estiver permitido
+        if (canAccess("configuracoes")) subItems.push({ name: "Geral", path: "/settings" });
+        if (canAccess("configuracoesProducao")) subItems.push({ name: "Produção", path: "/settings/production" });
+        if (canAccess("configuracoesKanban")) subItems.push({ name: "Kanban", path: "/settings/kanban" });
+        if (canAccess("notice")) subItems.push({ name: "Avisos", path: "/settings/avisos" });
+        if ((canAccess as any)("configuracoesProdutos")) subItems.push({ name: "Produtos", path: "/settings/produtos" });
+        if ((canAccess as any)("configuracoesCategorias")) subItems.push({ name: "Categorias", path: "/settings/categorias" });
+        return {
+          icon: <SettingsGearIcon />, name: "Configurações",
+          subItems,
+        } as NavItem;
+      })(),
+    ];
+    return items.filter(Boolean) as NavItem[];
+  }, [canAccess]);
 
-    // If no submenu item matches, close the open submenu
-    if (!submenuMatched) {
-      setOpenSubmenu(null);
-    }
-  }, [pathname,isActive]);
+  const mainContentMargin = isMobileOpen
+    ? "ml-0"
+    : isExpanded || isHovered
+    ? "lg:ml-[290px]"
+    : "lg:ml-[90px]";
 
-  useEffect(() => {
-    // Set the height of the submenu items when the submenu is opened
-    if (openSubmenu !== null) {
-      const key = `${openSubmenu.type}-${openSubmenu.index}`;
-      if (subMenuRefs.current[key]) {
-        setSubMenuHeight((prevHeights) => ({
-          ...prevHeights,
-          [key]: subMenuRefs.current[key]?.scrollHeight || 0,
-        }));
-      }
-    }
-  }, [openSubmenu]);
-
-  const handleSubmenuToggle = (index: number, menuType: "main" | "others") => {
-    setOpenSubmenu((prevOpenSubmenu) => {
-      if (
-        prevOpenSubmenu &&
-        prevOpenSubmenu.type === menuType &&
-        prevOpenSubmenu.index === index
-      ) {
-        return null;
-      }
-      return { type: menuType, index };
-    });
-  };
+  const showText = isExpanded || isHovered || isMobileOpen;
 
   return (
     <aside
-      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200 
-        ${
-          isExpanded || isMobileOpen
-            ? "w-[290px]"
-            : isHovered
-            ? "w-[290px]"
-            : "w-[90px]"
-        }
+      className={`fixed mt-16 flex flex-col lg:mt-0 top-0 px-5 left-0 bg-white dark:bg-gray-900 dark:border-gray-800 text-gray-900 h-screen transition-all duration-300 ease-in-out z-50 border-r border-gray-200
+        ${isExpanded || isMobileOpen ? "w-[290px]" : isHovered ? "w-[290px]" : "w-[90px]"}
         ${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
         lg:translate-x-0`}
       onMouseEnter={() => !isExpanded && setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div
-        className={`py-8 flex  ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-start"
-        }`}
-      >
+      <div className={`py-8 flex ${!isExpanded && !isHovered ? "lg:justify-center" : "justify-start"}`}>
         <Link href="/">
-          {isExpanded || isHovered || isMobileOpen ? (
+          {showText ? (
             <>
-               <Image
-                 className="dark:hidden"
-                 src="https://ygzagzsnpomuukjaraid.supabase.co/storage/v1/object/public/uploads/general/202508/logo-dentallab.svg"
-                 alt="Logo Dentallab"
-                 width={150}
-                 height={40}
-                 priority
-               />
-               <Image
-                 className="hidden dark:block"
-                 src="https://ygzagzsnpomuukjaraid.supabase.co/storage/v1/object/public/uploads/general/202508/logo-dentallab.svg"
-                 alt="Logo Dentallab"
-                 width={150}
-                 height={40}
-                 priority
-               />
+              <Image
+                className="dark:hidden"
+                src="https://ygzagzsnpomuukjaraid.supabase.co/storage/v1/object/public/uploads/general/202508/logo-dentallab.svg"
+                alt="Logo Dentallab"
+                width={150}
+                height={40}
+                priority
+              />
+              <Image
+                className="hidden dark:block"
+                src="https://ygzagzsnpomuukjaraid.supabase.co/storage/v1/object/public/uploads/general/202508/logo-dentallab.svg"
+                alt="Logo Dentallab"
+                width={150}
+                height={40}
+                priority
+              />
             </>
           ) : (
             <Image
@@ -324,28 +180,47 @@ const AppSidebar: React.FC = () => {
           )}
         </Link>
       </div>
+
       <div className="flex flex-col h-full overflow-y-auto duration-300 ease-linear no-scrollbar">
         <nav className="mb-6">
-          <div className="flex flex-col gap-4">
-            <div>
-              {renderMenuItems(filteredNavItems, "main")}
-
-            </div>
-
-            <div className="">
-              
-            </div>
-          </div>
+          <ul className="flex flex-col gap-4">
+            {navItems.map((item) => {
+              const hasSub = item.subItems && item.subItems.length > 0;
+              // local state per-item is tricky; for now handle only for settings (single submenu)
+              const isSettings = item.name === "Configurações";
+              return (
+                <li key={item.name}>
+                  {hasSub ? (
+                    <SidebarDropdownItem
+                      item={item}
+                      pathname={pathname}
+                      showText={showText}
+                      defaultOpen={pathname?.startsWith('/settings')}
+                    />
+                  ) : item.path ? (
+                    <Link
+                      href={item.path}
+                      className={`menu-item group ${pathname === item.path ? "menu-item-active" : "menu-item-inactive"}`}
+                    >
+                      <span className={`${pathname === item.path ? "menu-item-icon-active" : "menu-item-icon-inactive"}`}>
+                        {item.icon}
+                      </span>
+                      {showText && <span className="menu-item-text">{item.name}</span>}
+                    </Link>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
         </nav>
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
-        
-        {/* Session Alert */}
-          <SidebarSessionAlert />
-          
-          {/* Success Alert */}
-          <div className="mt-2">
-            <SidebarSuccessAlert />
-          </div>
+
+        {showText ? <SidebarWidget /> : null}
+
+        {/* Alerts */}
+        <SidebarSessionAlert />
+        <div className="mt-2">
+          <SidebarSuccessAlert />
+        </div>
       </div>
     </aside>
   );

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Client } from 'pg';
+import { logAppError } from '@/lib/logError';
 
 // Fallbacks de conexão para Postgres em diferentes ambientes
 const PG_URI =
@@ -89,6 +90,7 @@ export async function GET() {
     return NextResponse.json({ appName, showWelcome, welcomeMessage, showAdvantages, advantagesRotationMs, advantages, kanbanTextColor, promoEnabled, promoTitle, promoDescription, promoCtaLabel, promoCtaUrl });
   } catch (e) {
     console.error('Erro ao obter configurações do app (Supabase):', e);
+    await logAppError('settings/app GET failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({
       appName: 'LabAdmin',
       showWelcome: true,
@@ -278,6 +280,7 @@ export async function PUT(req: NextRequest) {
   } catch (e) {
     if (pg) await pg.query('rollback').catch(() => {});
     console.error('Erro ao salvar configurações do app (Supabase):', e);
+    await logAppError('settings/app PUT failed', 'error', { message: (e as any)?.message });
     return NextResponse.json({ message: 'Erro interno' }, { status: 500 });
   } finally {
     if (pg) await pg.end();

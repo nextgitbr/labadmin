@@ -4,6 +4,7 @@ import path from 'path';
 import { Pool } from 'pg';
 import '@/lib/sslFix';
 import { requireAuth } from '@/lib/apiAuth';
+import { logAppError } from '@/lib/logError';
 
 // Small CSV parser that supports quoted fields and commas within quotes
 function parseCSV(content: string): string[][] {
@@ -147,6 +148,7 @@ export async function GET() {
 
       return NextResponse.json(data, { status: 200 });
     } catch (fallbackErr: any) {
+      await logAppError('products GET failed', 'error', { message: String(err?.message ?? err), fallback: String(fallbackErr?.message ?? fallbackErr) });
       return NextResponse.json(
         { error: 'Falha ao ler produtos', details: String(err?.message ?? err), fallback: String(fallbackErr?.message ?? fallbackErr) },
         { status: 500 }
@@ -221,6 +223,7 @@ export async function POST(req: NextRequest) {
     const { rows } = await pool.query(sql, values);
     return NextResponse.json(rows[0] ?? {}, { status: 201 });
   } catch (err: any) {
+    await logAppError('products POST failed', 'error', { message: String(err?.message ?? err) });
     return NextResponse.json({ error: 'Erro ao criar produto', details: String(err?.message ?? err) }, { status: err?.status || 500 });
   }
 }
@@ -268,6 +271,7 @@ export async function PATCH(req: NextRequest) {
     if (res.rowCount === 0) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
     return NextResponse.json(res.rows[0]);
   } catch (err: any) {
+    await logAppError('products PATCH failed', 'error', { message: String(err?.message ?? err) });
     return NextResponse.json({ error: 'Erro ao atualizar produto', details: String(err?.message ?? err) }, { status: err?.status || 500 });
   }
 }
@@ -292,6 +296,7 @@ export async function DELETE(req: NextRequest) {
     if (res.rowCount === 0) return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 });
     return NextResponse.json({ message: 'Produto removido com sucesso' });
   } catch (err: any) {
+    await logAppError('products DELETE failed', 'error', { message: String(err?.message ?? err) });
     return NextResponse.json({ error: 'Erro ao remover produto', details: String(err?.message ?? err) }, { status: err?.status || 500 });
   }
 }

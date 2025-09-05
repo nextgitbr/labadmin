@@ -30,6 +30,27 @@ const CONSTRUCTION_TYPES = {
   'Total Prosthesis': '#B2418B'
 };
 
+// Grupos por tipo de trabalho para filtrar os botões
+const CONSTRUCTION_GROUPS = {
+  acrilico: [
+    'Provisional crown',
+    'Hybrid Protocol',
+    'Total Prosthesis',
+    'Waxup',
+    'Model',
+    'Bar'
+  ],
+  cadcam: [
+    'Inlay',
+    'Onlay',
+    'Veneer',
+    'Crown',
+    'Pontic',
+    'BiteSplint',
+    'Model' // pode ser feito em ambos dependendo do fluxo
+  ]
+};
+
 // Escala de cores Vita
 const VITA_SHADES = [
   { code: 'A1', color: '#F2E2D2' }, { code: 'A2', color: '#E8D0B8' }, 
@@ -447,25 +468,32 @@ export default function OdontogramaCompleto({ onSubmit, showPatientField = true 
               Tipos
             </p>
             <div className="grid grid-cols-2 gap-2 mb-4">
-              {Object.entries(CONSTRUCTION_TYPES).map(([type, color]) => (
-                <button
-                  key={type}
-                  onClick={() => {
-                    setCurrentConstructionType(type);
-                    if (selected.length > 0) {
-                      applyConstructionType(type);
-                    }
-                  }}
-                  className="p-2 text-white text-xs font-medium rounded transition-all"
-                  style={{
-                    backgroundColor: color,
-                    border: currentConstructionType === type ? '2px solid white' : '2px solid transparent',
-                    boxShadow: currentConstructionType === type ? '0 0 0 1px #073b4c' : 'none'
-                  }}
-                >
-                  {type}
-                </button>
-              ))}
+              {(
+                () => {
+                  const entries = Object.entries(CONSTRUCTION_TYPES);
+                  const group = workType && CONSTRUCTION_GROUPS[workType];
+                  const filtered = group ? entries.filter(([type]) => group.includes(type)) : entries;
+                  return filtered.map(([type, color]) => (
+                  <button
+                    key={type}
+                    onClick={() => {
+                      setCurrentConstructionType(type);
+                      if (selected.length > 0) {
+                        applyConstructionType(type);
+                      }
+                    }}
+                    className="p-2 text-white text-xs font-medium rounded transition-all"
+                    style={{
+                      backgroundColor: color,
+                      border: currentConstructionType === type ? '2px solid white' : '2px solid transparent',
+                      boxShadow: currentConstructionType === type ? '0 0 0 1px #073b4c' : 'none'
+                    }}
+                  >
+                    {type}
+                  </button>
+                  ));
+                }
+              )()}
               <button
                 onClick={() => {
                   setSelected([]);
@@ -477,6 +505,11 @@ export default function OdontogramaCompleto({ onSubmit, showPatientField = true 
                 Clear All
               </button>
             </div>
+            {workType && (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Filtrando por: <span className="font-medium">{workType === 'acrilico' ? 'Acrílico' : 'CAD-CAM'}</span>
+              </p>
+            )}
             
             {/* Construções Aplicadas */}
             <div className="mt-6">
