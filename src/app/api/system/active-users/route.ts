@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
         [String(windowMinutes)]
       );
       return NextResponse.json({ activeUsers: res.rows?.[0]?.c ?? 0, windowMinutes });
-    } catch (_) {
+    } catch (ignoredError) {
       // tenta heurística via users.updated_at
       try {
         const res2 = await pool.query(
@@ -46,14 +46,14 @@ export async function GET(req: NextRequest) {
           [String(windowMinutes)]
         );
         return NextResponse.json({ activeUsers: res2.rows?.[0]?.c ?? 0, windowMinutes });
-      } catch (e2) {
-        console.warn('[active-users] fallback returning 0:', (e2 as Error)?.message);
+      } catch (error) {
+        console.warn('[active-users] fallback returning 0:', (error as Error)?.message);
         return NextResponse.json({ activeUsers: 0, windowMinutes });
       }
     }
   } catch (error) {
     console.error('❌ active-users error:', error);
-    await logAppError('active-users endpoint failed', 'error', { message: (error as any)?.message });
+    await logAppError('active-users endpoint failed', 'error', { message: (error as Error)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }

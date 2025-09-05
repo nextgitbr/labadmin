@@ -18,8 +18,8 @@ export async function GET() {
     const nodeEnv = process.env.NODE_ENV || 'development';
 
     return NextResponse.json({ version, commit, builtAt, nodeEnv });
-  } catch (e) {
-    await logAppError('Failed to read build info', 'error');
+  } catch (error) {
+    await logAppError('Failed to read build info', 'error', { message: (error as Error)?.message });
     return NextResponse.json({ error: 'Failed to read build info' }, { status: 500 });
   }
 }

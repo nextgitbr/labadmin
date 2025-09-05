@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ errors: [] });
   } catch (error) {
     console.error('❌ errors endpoint failed:', error);
-    await logAppError('errors endpoint failed', 'error', { message: (error as any)?.message });
+    await logAppError('errors endpoint failed', 'error', { message: (error as Error)?.message });
     return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 });
   }
 }
